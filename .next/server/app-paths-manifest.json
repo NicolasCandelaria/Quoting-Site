@@ -1,0 +1,7 @@
+{
+  "/admin/page": "app/admin/page.js",
+  "/admin/projects/[projectId]/page": "app/admin/projects/[projectId]/page.js",
+  "/q/[projectId]/page": "app/q/[projectId]/page.js",
+  "/(site)/page": "app/(site)/page.js",
+  "/q/[projectId]/[itemId]/page": "app/q/[projectId]/[itemId]/page.js"
+}
