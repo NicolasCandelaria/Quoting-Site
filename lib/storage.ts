@@ -17,12 +17,14 @@ function readStore(): QuoteSheetStore {
   }
 }
 
-function writeStore(store: QuoteSheetStore) {
-  if (!isBrowser()) return;
+function writeStore(store: QuoteSheetStore): boolean {
+  if (!isBrowser()) return false;
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+    return true;
   } catch {
-    // ignore quota / serialization issues for this demo
+    // localStorage can fail (most often quota exceeded with large base64 images)
+    return false;
   }
 }
 
@@ -62,7 +64,10 @@ export function upsertItem(projectId: string, item: Item): Project | undefined {
 
   const updatedProject: Project = { ...project, items };
   store.projects[projectIndex] = updatedProject;
-  writeStore(store);
+
+  const didSave = writeStore(store);
+  if (!didSave) return undefined;
+
   return updatedProject;
 }
 
@@ -78,7 +83,10 @@ export function deleteItem(
   const items = project.items.filter((i) => i.id !== itemId);
   const updatedProject: Project = { ...project, items };
   store.projects[projectIndex] = updatedProject;
-  writeStore(store);
+
+  const didSave = writeStore(store);
+  if (!didSave) return undefined;
+
   return updatedProject;
 }
 
