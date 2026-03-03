@@ -201,9 +201,11 @@ export default function ProjectDetailPage() {
                   <div className="relative h-32 w-full overflow-hidden bg-slate-100">
                     {/* Using plain <img> for simplicity in this offline demo */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    {item.imageBase64 ? (
+                    {item.images && item.images.length > 0 ? (
                       <img
-                        src={item.imageBase64}
+                        src={
+                          item.images[item.previewImageIndex] ?? item.images[0]
+                        }
                         alt={item.name}
                         className="h-full w-full object-cover transition group-hover:scale-[1.02]"
                       />

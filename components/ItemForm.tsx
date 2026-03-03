@@ -13,7 +13,8 @@ type ItemFormProps = {
 const emptyItemBase: Omit<Item, "id"> = {
   name: "",
   shortDescription: "",
-  imageBase64: "",
+  images: [],
+  previewImageIndex: 0,
   material: "",
   size: "",
   logo: "",
@@ -152,12 +153,15 @@ export function ItemForm({ initial, onSubmit, onCancel }: ItemFormProps) {
       </section>
 
       <section className="card p-5 space-y-4">
-        <h2 className="text-base font-semibold text-slate-900">
-          Product Image
+        <h2 className="text-base font-semibold text-zinc-950">
+          Product Images
         </h2>
         <ImageDropzone
-          value={item.imageBase64}
-          onChange={(dataUrl) => updateField("imageBase64", dataUrl)}
+          images={item.images}
+          previewIndex={item.previewImageIndex}
+          onChange={(images, previewIndex) =>
+            setItem((prev) => ({ ...prev, images, previewImageIndex: previewIndex }))
+          }
         />
       </section>
 
