@@ -13,6 +13,7 @@ export default function ClientItemPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [item, setItem] = useState<Item | null>(null);
   const [copied, setCopied] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   useEffect(() => {
     const data = getProject(projectId);
@@ -84,20 +85,81 @@ export default function ClientItemPage() {
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-        <section className="card overflow-hidden">
-          {/* Using plain <img> for simplicity in this offline demo */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          {item.imageBase64 ? (
-            <img
-              src={item.imageBase64}
-              alt={item.name}
-              className="h-72 w-full object-cover sm:h-80"
-            />
-          ) : (
-            <div className="flex h-72 w-full items-center justify-center bg-zinc-100 text-sm text-zinc-500 sm:h-80">
-              No image provided
+        <section className="space-y-3">
+          <div className="card overflow-hidden">
+            {/* Using plain <img> for simplicity in this offline demo */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {item.images && item.images.length > 0 ? (
+              <img
+                src={
+                  item.images[activeImageIndex] ??
+                  item.images[item.previewImageIndex] ??
+                  item.images[0]
+                }
+                alt={item.name}
+                className="h-72 w-full object-cover sm:h-80"
+              />
+            ) : (
+              <div className="flex h-72 w-full items-center justify-center bg-zinc-100 text-sm text-zinc-500 sm:h-80">
+                No image provided
+              </div>
+            )}
+          </div>
+
+          {item.images && item.images.length > 1 && (
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex gap-2">
+                {item.images.map((src, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => setActiveImageIndex(index)}
+                    className={`h-12 w-12 overflow-hidden rounded-md border ${
+                      index === activeImageIndex
+                        ? "border-brand-600 ring-2 ring-brand-200"
+                        : "border-zinc-200 hover:border-brand-300"
+                    }`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={src}
+                      alt={`Thumbnail ${index + 1}`}
+                      className="h-full w-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="btn-secondary !px-2 !py-1 text-xs"
+                  onClick={() =>
+                    setActiveImageIndex((prev) =>
+                      prev === 0 ? item.images.length - 1 : prev - 1,
+                    )
+                  }
+                >
+                  Prev
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary !px-2 !py-1 text-xs"
+                  onClick={() =>
+                    setActiveImageIndex((prev) =>
+                      prev === item.images.length - 1 ? 0 : prev + 1,
+                    )
+                  }
+                >
+                  Next
+                </button>
+              </div>
             </div>
           )}
+
+          <p className="text-[11px] text-zinc-500">
+            For visual representation purposes only. May not be exactly as
+            shown.
+          </p>
         </section>
 
         <section className="space-y-4">
@@ -171,9 +233,14 @@ export default function ClientItemPage() {
           <h2 className="text-base font-semibold text-zinc-950">
             Pricing (Delivered Duty Paid)
           </h2>
-          <p className="text-xs text-zinc-500">
-            Pricing subject to final quote and availability.
-          </p>
+          <div className="space-y-1 text-xs text-zinc-500">
+            <p>Pricing subject to final quote and availability.</p>
+            <p>
+              Important note: Quotations are valid for 15 days. Lead times will
+              be confirmed upon receipt of sign-off. Please be advised that
+              pricing may vary based on fluctuating tariff rates.
+            </p>
+          </div>
         </div>
 
         {sortedTiers.length === 0 ? (
@@ -214,6 +281,19 @@ export default function ClientItemPage() {
           </div>
         )}
       </section>
+
+      <p className="text-[10px] leading-snug text-zinc-500">
+        This quote sheet together with the ideas expressed therein are the
+        Confidential and Proprietary work of Billboard Worldwide Promotions Ltd.
+        (“Billboard”) and is delivered to the recipient for the sole and
+        exclusive purpose of soliciting a PO, job, or contract for work from the
+        recipient. Billboard is the sole and exclusive copyright owner of the
+        images and/or ideas expressed in the Quote Sheet and the recipient will
+        not copy or alter the same, including removing Billboard’s name or
+        trademarks or adding the name or trademarks of the recipient or any
+        third party and the recipient will not present it as the recipient’s own
+        or original work without Billboard’s prior written consent.
+      </p>
     </div>
   );
 }
