@@ -12,6 +12,7 @@ export default function NewItemPage() {
   const projectId = params.projectId;
 
   const [project, setProject] = useState<Project | null>(null);
+  const [saveError, setSaveError] = useState<string>("");
 
   useEffect(() => {
     const data = getProject(projectId);
@@ -25,10 +26,16 @@ export default function NewItemPage() {
   }
 
   const handleSubmit = (item: Item) => {
+    setSaveError("");
     const updated = upsertItem(projectId, item);
     if (updated) {
       router.push(`/admin/projects/${projectId}`);
+      return;
     }
+
+    setSaveError(
+      "Could not save this item. Browser storage may be full due to large images. Try fewer/smaller images, then save again.",
+    );
   };
 
   return (
@@ -46,6 +53,12 @@ export default function NewItemPage() {
           </p>
         )}
       </header>
+
+      {saveError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {saveError}
+        </div>
+      )}
 
       <ItemForm
         onSubmit={handleSubmit}
