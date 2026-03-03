@@ -13,6 +13,7 @@ export default function EditItemPage() {
   const itemId = params.itemId;
 
   const [project, setProject] = useState<Project | null>(null);
+  const [saveError, setSaveError] = useState<string>("");
   const [initialItem, setInitialItem] = useState<Item | null>(null);
 
   useEffect(() => {
@@ -30,10 +31,16 @@ export default function EditItemPage() {
   }
 
   const handleSubmit = (item: Item) => {
+    setSaveError("");
     const updated = upsertItem(projectId, item);
     if (updated) {
       router.push(`/admin/projects/${projectId}`);
+      return;
     }
+
+    setSaveError(
+      "Could not save this item. Browser storage may be full due to large images. Try fewer/smaller images, then save again.",
+    );
   };
 
   if (!initialItem) {
@@ -59,6 +66,12 @@ export default function EditItemPage() {
           </p>
         )}
       </header>
+
+      {saveError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {saveError}
+        </div>
+      )}
 
       <ItemForm
         initial={initialItem}
