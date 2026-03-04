@@ -8,7 +8,8 @@ export type Item = {
   id: string;
   name: string;
   shortDescription: string;
-  imageBase64: string;
+  images: string[];
+  previewImageIndex: number;
   material: string;
   size: string;
   logo: string;
