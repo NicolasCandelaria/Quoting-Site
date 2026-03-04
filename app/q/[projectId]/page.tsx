@@ -95,6 +95,19 @@ export default function ClientProjectPage() {
           ))}
         </section>
       )}
+
+      <p className="mt-6 text-[10px] leading-snug text-zinc-500">
+        This quote sheet together with the ideas expressed therein are the
+        Confidential and Proprietary work of Billboard Worldwide Promotions Ltd.
+        (“Billboard”) and is delivered to the recipient for the sole and
+        exclusive purpose of soliciting a PO, job, or contract for work from the
+        recipient. Billboard is the sole and exclusive copyright owner of the
+        images and/or ideas expressed in the Quote Sheet and the recipient will
+        not copy or alter the same, including removing Billboard’s name or
+        trademarks or adding the name or trademarks of the recipient or any
+        third party and the recipient will not present it as the recipient’s own
+        or original work without Billboard’s prior written consent.
+      </p>
     </div>
   );
 }

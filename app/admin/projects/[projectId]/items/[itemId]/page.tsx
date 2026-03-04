@@ -41,6 +41,10 @@ export default function EditItemPage() {
           : "Could not save this item. Please try again.",
       );
     }
+
+    setSaveError(
+      "Could not save this item. Browser storage may be full due to large images. Try fewer/smaller images, then save again.",
+    );
   };
 
   if (!project || !initialItem) {

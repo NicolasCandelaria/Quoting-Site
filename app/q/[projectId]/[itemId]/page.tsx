@@ -13,6 +13,7 @@ export default function ClientItemPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [item, setItem] = useState<Item | null>(null);
   const [copied, setCopied] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   useEffect(() => {
     const load = async () => {
@@ -76,6 +77,11 @@ export default function ClientItemPage() {
           ) : (
             <div className="flex h-72 w-full items-center justify-center bg-zinc-100 text-sm text-zinc-500 sm:h-80">No image provided</div>
           )}
+
+          <p className="text-[11px] text-zinc-500">
+            For visual representation purposes only. May not be exactly as
+            shown.
+          </p>
         </section>
 
         <section className="space-y-4">
@@ -136,6 +142,19 @@ export default function ClientItemPage() {
           </div>
         )}
       </section>
+
+      <p className="text-[10px] leading-snug text-zinc-500">
+        This quote sheet together with the ideas expressed therein are the
+        Confidential and Proprietary work of Billboard Worldwide Promotions Ltd.
+        (“Billboard”) and is delivered to the recipient for the sole and
+        exclusive purpose of soliciting a PO, job, or contract for work from the
+        recipient. Billboard is the sole and exclusive copyright owner of the
+        images and/or ideas expressed in the Quote Sheet and the recipient will
+        not copy or alter the same, including removing Billboard’s name or
+        trademarks or adding the name or trademarks of the recipient or any
+        third party and the recipient will not present it as the recipient’s own
+        or original work without Billboard’s prior written consent.
+      </p>
     </div>
   );
 }
