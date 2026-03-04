@@ -13,6 +13,7 @@ export default function EditItemPage() {
   const itemId = String(params.itemId ?? "");
 
   const [project, setProject] = useState<Project | null>(null);
+  const [saveError, setSaveError] = useState<string>("");
   const [initialItem, setInitialItem] = useState<Item | null>(null);
   const [saveError, setSaveError] = useState("");
 
@@ -50,7 +51,6 @@ export default function EditItemPage() {
 
       setSaveError(message);
     }
-  };
 
   if (!project || !initialItem) {
     return <p className="text-sm text-slate-600">Loading item details...</p>;
