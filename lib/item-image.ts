@@ -2,6 +2,8 @@ import type { Item } from "@/lib/models";
 
 type ItemImageCompat = Item & {
   imageBase64?: string;
+  images?: string[];
+  previewImageIndex?: number;
 };
 
 export function getItemPreviewImage(item: Item): string {
