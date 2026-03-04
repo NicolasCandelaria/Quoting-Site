@@ -30,10 +30,20 @@ export default function NewItemPage() {
       await createOrUpdateItem(projectId, item);
       router.push(`/admin/projects/${projectId}`);
     } catch (error) {
-      setSaveError(
+      const message =
         error instanceof Error
           ? error.message
-          : "Could not save this item. Please try again.",
+          : "Could not save this item. Please try again.";
+
+      if (message.includes("Browser storage may be full")) {
+        setSaveError(
+          "Save failed on the deployed server. This message comes from an older build path. Redeploy the latest branch and rerun the Supabase schema migration.",
+        );
+        return;
+      }
+
+      setSaveError(
+        message,
       );
     }
 

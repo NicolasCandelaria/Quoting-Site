@@ -35,17 +35,22 @@ export default function EditItemPage() {
       await createOrUpdateItem(projectId, item);
       router.push(`/admin/projects/${projectId}`);
     } catch (error) {
-      setSaveError(
+      const message =
         error instanceof Error
           ? error.message
-          : "Could not save this item. Please try again.",
+          : "Could not save this item. Please try again.";
+
+      if (message.includes("Browser storage may be full")) {
+        setSaveError(
+          "Save failed on the deployed server. This message comes from an older build path. Redeploy the latest branch and rerun the Supabase schema migration.",
+        );
+        return;
+      }
+
+      setSaveError(
+        message,
       );
     }
-
-    setSaveError(
-      "Could not save this item. Browser storage may be full due to large images. Try fewer/smaller images, then save again.",
-    );
-  };
 
   if (!project || !initialItem) {
     return <p className="text-sm text-slate-600">Loading item details...</p>;
