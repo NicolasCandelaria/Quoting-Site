@@ -157,7 +157,7 @@ export function ItemForm({ initial, onSubmit, onCancel }: ItemFormProps) {
         </h2>
         <ImageDropzone
           value={item.imageBase64}
-          onChange={(dataUrl) => updateField("imageBase64", dataUrl)}
+          onChange={(dataUrl: string) => updateField("imageBase64", dataUrl)}
         />
       </section>
 
