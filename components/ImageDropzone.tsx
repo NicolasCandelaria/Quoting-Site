@@ -3,8 +3,9 @@
 import { useCallback, useRef, useState } from "react";
 
 type Props = {
-  value: string;
-  onChange: (url: string) => void;
+  images: string[];
+  previewIndex: number;
+  onChange: (images: string[], previewIndex: number) => void;
 };
 
 export function ImageDropzone({ images, previewIndex, onChange }: Props) {
