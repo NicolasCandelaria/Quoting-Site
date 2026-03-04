@@ -19,7 +19,7 @@ type SupabaseRowItem = {
   short_description: string;
   image_urls?: string[] | null;
   preview_image_index?: number | null;
-  image_base64: string | null;
+  image_base64?: string | null;
   material: string;
   size: string;
   logo: string;
@@ -49,13 +49,9 @@ function headers() {
   };
 }
 
-function isMissingMultiImageColumnError(error: unknown) {
+function isMissingColumnError(error: unknown) {
   const message = error instanceof Error ? error.message : "";
-  return (
-    message.includes("42703") &&
-    (message.includes("items.image_urls") ||
-      message.includes("items.preview_image_index"))
-  );
+  return message.includes("42703") && message.includes("column");
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -123,7 +119,7 @@ function toProject(row: SupabaseRowProject, items: Item[]): Project {
   };
 }
 
-function toItemInsert(projectId: string, item: Item) {
+function getItemImages(item: Item) {
   const source = item as ItemCompat;
   const images =
     Array.isArray(source.images) && source.images.length > 0
@@ -135,6 +131,12 @@ function toItemInsert(projectId: string, item: Item) {
     typeof source.previewImageIndex === "number" && source.previewImageIndex >= 0
       ? Math.min(source.previewImageIndex, Math.max(images.length - 1, 0))
       : 0;
+
+  return { images, previewImageIndex };
+}
+
+function toItemInsertWithAllImageColumns(projectId: string, item: Item) {
+  const { images, previewImageIndex } = getItemImages(item);
 
   return {
     id: item.id,
@@ -154,16 +156,35 @@ function toItemInsert(projectId: string, item: Item) {
   };
 }
 
-function toLegacyItemInsert(projectId: string, item: Item) {
-  const images = Array.isArray(item.images) ? item.images : [];
-  const primary = images[item.previewImageIndex] ?? images[0] ?? null;
+function toItemInsertWithGalleryColumns(projectId: string, item: Item) {
+  const { images, previewImageIndex } = getItemImages(item);
 
   return {
     id: item.id,
     project_id: projectId,
     name: item.name,
     short_description: item.shortDescription,
-    image_base64: primary,
+    image_urls: images,
+    preview_image_index: previewImageIndex,
+    material: item.material,
+    size: item.size,
+    logo: item.logo,
+    pre_production_sample_time: item.preProductionSampleTime,
+    pre_production_sample_fee: item.preProductionSampleFee,
+    packing_details: item.packingDetails,
+    price_tiers: item.priceTiers,
+  };
+}
+
+function toItemInsertWithLegacyColumn(projectId: string, item: Item) {
+  const { images, previewImageIndex } = getItemImages(item);
+
+  return {
+    id: item.id,
+    project_id: projectId,
+    name: item.name,
+    short_description: item.shortDescription,
+    image_base64: images[previewImageIndex] ?? images[0] ?? null,
     material: item.material,
     size: item.size,
     logo: item.logo,
@@ -177,19 +198,26 @@ function toLegacyItemInsert(projectId: string, item: Item) {
 async function listItemsFromSupabase(projectId?: string) {
   const projectFilter = projectId ? `&project_id=eq.${projectId}` : "";
 
-  try {
-    return await request<SupabaseRowItem[]>(
-      `/items?select=id,project_id,name,short_description,image_urls,preview_image_index,image_base64,material,size,logo,pre_production_sample_time,pre_production_sample_fee,packing_details,price_tiers${projectFilter}`,
-    );
-  } catch (error) {
-    if (!isMissingMultiImageColumnError(error)) {
-      throw error;
-    }
+  const queryCandidates = [
+    `/items?select=id,project_id,name,short_description,image_urls,preview_image_index,image_base64,material,size,logo,pre_production_sample_time,pre_production_sample_fee,packing_details,price_tiers${projectFilter}`,
+    `/items?select=id,project_id,name,short_description,image_urls,preview_image_index,material,size,logo,pre_production_sample_time,pre_production_sample_fee,packing_details,price_tiers${projectFilter}`,
+    `/items?select=id,project_id,name,short_description,image_base64,material,size,logo,pre_production_sample_time,pre_production_sample_fee,packing_details,price_tiers${projectFilter}`,
+  ];
 
-    return request<SupabaseRowItem[]>(
-      `/items?select=id,project_id,name,short_description,image_base64,material,size,logo,pre_production_sample_time,pre_production_sample_fee,packing_details,price_tiers${projectFilter}`,
-    );
+  let lastError: unknown;
+
+  for (const query of queryCandidates) {
+    try {
+      return await request<SupabaseRowItem[]>(query);
+    } catch (error) {
+      if (!isMissingColumnError(error)) {
+        throw error;
+      }
+      lastError = error;
+    }
   }
+
+  throw lastError instanceof Error ? lastError : new Error("Could not read items.");
 }
 
 export async function listProjectsFromSupabase(): Promise<Project[]> {
@@ -271,33 +299,43 @@ export async function saveProjectInSupabase(project: Project): Promise<Project> 
   return toProject(row, current?.items ?? []);
 }
 
+async function upsertItemWithPayload(payload: unknown) {
+  return request<SupabaseRowItem[]>("/items?on_conflict=id&select=id", {
+    method: "POST",
+    headers: {
+      Prefer: "resolution=merge-duplicates,return=representation",
+    },
+    body: JSON.stringify([payload]),
+  });
+}
+
 export async function upsertItemInSupabase(
   projectId: string,
   item: Item,
 ): Promise<Project | undefined> {
-  try {
-    await request<SupabaseRowItem[]>("/items?on_conflict=id&select=id", {
-      method: "POST",
-      headers: {
-        Prefer: "resolution=merge-duplicates,return=representation",
-      },
-      body: JSON.stringify([toItemInsert(projectId, item)]),
-    });
-  } catch (error) {
-    if (!isMissingMultiImageColumnError(error)) {
-      throw error;
-    }
+  const payloadCandidates = [
+    toItemInsertWithAllImageColumns(projectId, item),
+    toItemInsertWithGalleryColumns(projectId, item),
+    toItemInsertWithLegacyColumn(projectId, item),
+  ];
 
-    await request<SupabaseRowItem[]>("/items?on_conflict=id&select=id", {
-      method: "POST",
-      headers: {
-        Prefer: "resolution=merge-duplicates,return=representation",
-      },
-      body: JSON.stringify([toLegacyItemInsert(projectId, item)]),
-    });
+  let lastError: unknown;
+
+  for (const payload of payloadCandidates) {
+    try {
+      await upsertItemWithPayload(payload);
+      return getProjectFromSupabase(projectId);
+    } catch (error) {
+      if (!isMissingColumnError(error)) {
+        throw error;
+      }
+      lastError = error;
+    }
   }
 
-  return getProjectFromSupabase(projectId);
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("Could not save item due to schema mismatch.");
 }
 
 export async function deleteItemInSupabase(
