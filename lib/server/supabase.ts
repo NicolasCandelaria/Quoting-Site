@@ -191,6 +191,34 @@ export async function createProjectInSupabase(input: {
   return toProject(row, []);
 }
 
+
+export async function saveProjectInSupabase(project: Project): Promise<Project> {
+  const rows = await request<SupabaseRowProject[]>(
+    "/projects?id=eq." + project.id + "&select=id,name,client,notes,created_at",
+    {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        name: project.name,
+        client: project.client,
+        notes: project.notes ?? null,
+      }),
+    },
+  );
+
+  const row = rows[0];
+  if (!row) {
+    throw new Error("Project not found while updating.");
+  }
+
+  const current = await getProjectFromSupabase(project.id);
+  if (!current) {
+    return toProject(row, []);
+  }
+
+  return { ...current, ...toProject(row, current.items) };
+}
+
 export async function upsertItemInSupabase(
   projectId: string,
   item: Item,

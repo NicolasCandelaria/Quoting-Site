@@ -5,31 +5,48 @@ import { useCallback, useRef, useState } from "react";
 type Props = {
   images: string[];
   previewIndex: number;
-  onChange: (nextImages: string[], nextPreviewIndex: number) => void;
+  onChange: (images: string[], previewIndex: number) => void;
 };
 
 export function ImageDropzone({ images, previewIndex, onChange }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleFiles = useCallback(
-    (files: FileList | null) => {
-      if (!files || files.length === 0) return;
-      const nextImages: string[] = [...images];
+    async (files: FileList | null) => {
+      const file = files?.[0];
+      if (!file) return;
 
-      Array.from(files).forEach((file) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const result = e.target?.result;
-          if (typeof result === "string") {
-            nextImages.push(result);
-            const newPreviewIndex =
-              nextImages.length === 1 ? 0 : previewIndex;
-            onChange([...nextImages], newPreviewIndex);
-          }
-        };
-        reader.readAsDataURL(file);
-      });
+      setError("");
+      setUploading(true);
+
+      try {
+        const form = new FormData();
+        form.append("file", file);
+
+        const response = await fetch("/api/uploads", {
+          method: "POST",
+          body: form,
+        });
+
+        const body = (await response.json()) as { url?: string; error?: string };
+
+        if (!response.ok || !body.url) {
+          throw new Error(body.error || "Image upload failed.");
+        }
+
+        onChange(body.url);
+      } catch (uploadError) {
+        const message =
+          uploadError instanceof Error
+            ? uploadError.message
+            : "Image upload failed.";
+        setError(message);
+      } finally {
+        setUploading(false);
+      }
     },
     [images, onChange, previewIndex],
   );
@@ -37,7 +54,7 @@ export function ImageDropzone({ images, previewIndex, onChange }: Props) {
   return (
     <div className="flex flex-col gap-3">
       <div
-        className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-6 text-center text-xs sm:text-sm transition ${
+        className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-6 text-center text-xs sm:text-sm transition ${
           isDragging
             ? "border-brand-500 bg-brand-50"
             : "border-zinc-300 bg-zinc-50"
@@ -53,7 +70,7 @@ export function ImageDropzone({ images, previewIndex, onChange }: Props) {
         onDrop={(e) => {
           e.preventDefault();
           setIsDragging(false);
-          handleFiles(e.dataTransfer.files);
+          void handleFiles(e.dataTransfer.files);
         }}
         onClick={() => inputRef.current?.click()}
       >
@@ -62,7 +79,7 @@ export function ImageDropzone({ images, previewIndex, onChange }: Props) {
         </p>
         <p className="mt-1 text-slate-500">or click to browse</p>
         <p className="mt-2 text-[11px] text-slate-400">
-          JPG, PNG or GIF. Stored locally in your browser only.
+          JPG, PNG or GIF. Uploaded to cloud storage.
         </p>
       </div>
 
@@ -72,23 +89,29 @@ export function ImageDropzone({ images, previewIndex, onChange }: Props) {
         accept="image/*"
         multiple
         className="hidden"
-        onChange={(e) => handleFiles(e.target.files)}
+        onChange={(e) => {
+          void handleFiles(e.target.files);
+        }}
       />
 
-      {images.length > 0 && (
-        <div className="mt-1 space-y-3">
-          <div>
-            <p className="text-xs font-medium text-zinc-700 mb-1">
-              Preview image
-            </p>
-            <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={images[previewIndex] ?? images[0]}
-                alt="Preview"
-                className="h-40 w-full object-cover"
-              />
-            </div>
+      {uploading && (
+        <p className="text-xs text-slate-500">Uploading image…</p>
+      )}
+
+      {error && (
+        <p className="text-xs text-red-600">{error}</p>
+      )}
+
+      {value && (
+        <div className="mt-1">
+          <p className="mb-1 text-xs font-medium text-slate-700">Preview</p>
+          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={value}
+              alt="Uploaded preview"
+              className="h-40 w-full object-cover"
+            />
           </div>
 
           {images.length > 1 && (
@@ -124,4 +147,3 @@ export function ImageDropzone({ images, previewIndex, onChange }: Props) {
     </div>
   );
 }
-

@@ -1,9 +1,9 @@
 "use client";
 
-import { notFound, useParams, useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Project, Item } from "@/lib/models";
-import { getProject, upsertItem } from "@/lib/storage";
+import { createOrUpdateItem, fetchProject } from "@/lib/api";
 import { ItemForm } from "@/components/ItemForm";
 
 export default function EditItemPage() {
@@ -17,25 +17,29 @@ export default function EditItemPage() {
   const [initialItem, setInitialItem] = useState<Item | null>(null);
 
   useEffect(() => {
-    const data = getProject(projectId);
-    if (!data) return;
-    setProject(data);
-    const found = data.items.find((i) => i.id === itemId) ?? null;
-    setInitialItem(found);
+    const load = async () => {
+      const data = await fetchProject(projectId);
+      if (!data) return;
+      setProject(data);
+      const found = data.items.find((i) => i.id === itemId) ?? null;
+      setInitialItem(found);
+    };
+
+    void load();
   }, [projectId, itemId]);
 
-  if (!project || !initialItem) {
-    const maybe = getProject(projectId);
-    const item = maybe?.items.find((i) => i.id === itemId);
-    if (!maybe || !item) notFound();
-  }
-
-  const handleSubmit = (item: Item) => {
+  const handleSubmit = async (item: Item) => {
     setSaveError("");
-    const updated = upsertItem(projectId, item);
-    if (updated) {
+
+    try {
+      await createOrUpdateItem(projectId, item);
       router.push(`/admin/projects/${projectId}`);
-      return;
+    } catch (error) {
+      setSaveError(
+        error instanceof Error
+          ? error.message
+          : "Could not save this item. Please try again.",
+      );
     }
 
     setSaveError(
@@ -43,12 +47,8 @@ export default function EditItemPage() {
     );
   };
 
-  if (!initialItem) {
-    return (
-      <p className="text-sm text-slate-600">
-        Loading item details...
-      </p>
-    );
+  if (!project || !initialItem) {
+    return <p className="text-sm text-slate-600">Loading item details...</p>;
   }
 
   return (
@@ -57,14 +57,9 @@ export default function EditItemPage() {
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
           Edit Item
         </h1>
-        {project && (
-          <p className="text-sm text-slate-600">
-            Project:{" "}
-            <span className="font-medium text-slate-900">
-              {project.name}
-            </span>
-          </p>
-        )}
+        <p className="text-sm text-slate-600">
+          Project: <span className="font-medium text-slate-900">{project.name}</span>
+        </p>
       </header>
 
       {saveError && (
@@ -81,4 +76,3 @@ export default function EditItemPage() {
     </div>
   );
 }
-
