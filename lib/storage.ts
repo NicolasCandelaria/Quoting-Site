@@ -4,6 +4,33 @@ const isBrowser = () => typeof window !== "undefined";
 
 const emptyStore: QuoteSheetStore = { projects: [] };
 
+function normalizeStore(raw: QuoteSheetStore): QuoteSheetStore {
+  return {
+    projects: (raw.projects ?? []).map((project) => ({
+      ...project,
+      items: (project.items ?? []).map((item: any) => {
+        const images: string[] =
+          Array.isArray(item.images) && item.images.length > 0
+            ? item.images
+            : item.imageBase64
+              ? [item.imageBase64 as string]
+              : [];
+        const previewImageIndex: number =
+          typeof item.previewImageIndex === "number" &&
+          item.previewImageIndex >= 0 &&
+          item.previewImageIndex < images.length
+            ? item.previewImageIndex
+            : 0;
+        return {
+          ...item,
+          images,
+          previewImageIndex,
+        };
+      }),
+    })),
+  };
+}
+
 function readStore(): QuoteSheetStore {
   if (!isBrowser()) return emptyStore;
   try {
@@ -11,7 +38,7 @@ function readStore(): QuoteSheetStore {
     if (!raw) return emptyStore;
     const parsed = JSON.parse(raw) as QuoteSheetStore;
     if (!Array.isArray(parsed.projects)) return emptyStore;
-    return parsed;
+    return normalizeStore(parsed);
   } catch {
     return emptyStore;
   }

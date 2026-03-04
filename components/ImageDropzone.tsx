@@ -7,7 +7,7 @@ type Props = {
   onChange: (url: string) => void;
 };
 
-export function ImageDropzone({ value, onChange }: Props) {
+export function ImageDropzone({ images, previewIndex, onChange }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -47,7 +47,7 @@ export function ImageDropzone({ value, onChange }: Props) {
         setUploading(false);
       }
     },
-    [onChange],
+    [images, onChange, previewIndex],
   );
 
   return (
@@ -56,7 +56,7 @@ export function ImageDropzone({ value, onChange }: Props) {
         className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-6 text-center text-xs sm:text-sm transition ${
           isDragging
             ? "border-brand-500 bg-brand-50"
-            : "border-slate-300 bg-slate-50"
+            : "border-zinc-300 bg-zinc-50"
         }`}
         onDragOver={(e) => {
           e.preventDefault();
@@ -86,6 +86,7 @@ export function ImageDropzone({ value, onChange }: Props) {
         ref={inputRef}
         type="file"
         accept="image/*"
+        multiple
         className="hidden"
         onChange={(e) => {
           void handleFiles(e.target.files);
@@ -111,6 +112,35 @@ export function ImageDropzone({ value, onChange }: Props) {
               className="h-40 w-full object-cover"
             />
           </div>
+
+          {images.length > 1 && (
+            <div className="space-y-1">
+              <p className="text-[11px] font-medium text-zinc-600">
+                Gallery images
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {images.map((src, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    className={`relative overflow-hidden rounded-md border ${
+                      index === previewIndex
+                        ? "border-brand-500 ring-2 ring-brand-200"
+                        : "border-zinc-200 hover:border-brand-300"
+                    }`}
+                    onClick={() => onChange(images, index)}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={src}
+                      alt={`Thumbnail ${index + 1}`}
+                      className="h-16 w-16 object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
