@@ -51,7 +51,6 @@ export default function EditItemPage() {
         message,
       );
     }
-  };
 
   if (!project || !initialItem) {
     return <p className="text-sm text-slate-600">Loading item details...</p>;
