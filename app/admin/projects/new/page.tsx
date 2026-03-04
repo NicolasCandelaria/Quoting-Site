@@ -2,18 +2,33 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { createProject } from "@/lib/storage";
+import { createProject } from "@/lib/api";
 
 export default function NewProjectPage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [client, setClient] = useState("");
   const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const project = createProject({ name, client, notes: notes || undefined });
-    router.push(`/admin/projects/${project.id}`);
+    setSaving(true);
+    setError("");
+
+    try {
+      const project = await createProject({
+        name,
+        client,
+        notes: notes || undefined,
+      });
+      router.push(`/admin/projects/${project.id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not create project.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -27,10 +42,7 @@ export default function NewProjectPage() {
         </p>
       </header>
 
-      <form
-        onSubmit={handleSubmit}
-        className="card p-6 space-y-4 max-w-xl"
-      >
+      <form onSubmit={handleSubmit} className="card max-w-xl space-y-4 p-6">
         <div>
           <label className="label">Project Name</label>
           <input
@@ -58,13 +70,16 @@ export default function NewProjectPage() {
           />
         </div>
 
+        {error && (
+          <p className="text-sm text-red-700">{error}</p>
+        )}
+
         <div className="pt-2">
-          <button type="submit" className="btn-primary">
-            Create &amp; Continue
+          <button type="submit" className="btn-primary" disabled={saving}>
+            {saving ? "Creating…" : "Create & Continue"}
           </button>
         </div>
       </form>
     </div>
   );
 }
-
