@@ -1,10 +1,10 @@
 "use client";
 
-import { notFound, useParams, useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { Project, Item } from "@/lib/models";
-import { getProject, upsertItem } from "@/lib/storage";
+import type { Item, Project } from "@/lib/models";
 import { ItemForm } from "@/components/ItemForm";
+import { createOrUpdateItem, fetchProject } from "@/lib/api";
 
 export default function EditItemPage() {
   const params = useParams<{ projectId: string; itemId: string }>();
@@ -14,51 +14,59 @@ export default function EditItemPage() {
 
   const [project, setProject] = useState<Project | null>(null);
   const [initialItem, setInitialItem] = useState<Item | null>(null);
+  const [saveError, setSaveError] = useState("");
 
   useEffect(() => {
-    const data = getProject(projectId);
-    if (!data) return;
-    setProject(data);
-    const found = data.items.find((i) => i.id === itemId) ?? null;
-    setInitialItem(found);
-  }, [projectId, itemId]);
+    const load = async () => {
+      const data = await fetchProject(projectId);
+      if (!data) return;
 
-  if (!project || !initialItem) {
-    const maybe = getProject(projectId);
-    const item = maybe?.items.find((i) => i.id === itemId);
-    if (!maybe || !item) notFound();
-  }
+      setProject(data);
+      setInitialItem(data.items.find((candidate) => candidate.id === itemId) ?? null);
+    };
 
-  const handleSubmit = (item: Item) => {
-    const updated = upsertItem(projectId, item);
-    if (updated) {
+    void load();
+  }, [itemId, projectId]);
+
+  const handleSubmit = async (item: Item) => {
+    setSaveError("");
+
+    try {
+      await createOrUpdateItem(projectId, item);
       router.push(`/admin/projects/${projectId}`);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Could not save this item. Please try again.";
+
+      if (message.includes("Browser storage may be full")) {
+        setSaveError(
+          "Save failed on the deployed server. This message comes from an older build path. Redeploy the latest branch and rerun the Supabase schema migration.",
+        );
+        return;
+      }
+
+      setSaveError(message);
     }
   };
 
-  if (!initialItem) {
-    return (
-      <p className="text-sm text-slate-600">
-        Loading item details...
-      </p>
-    );
+  if (!project || !initialItem) {
+    return <p className="text-sm text-slate-600">Loading item details...</p>;
   }
 
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-          Edit Item
-        </h1>
-        {project && (
-          <p className="text-sm text-slate-600">
-            Project:{" "}
-            <span className="font-medium text-slate-900">
-              {project.name}
-            </span>
-          </p>
-        )}
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Edit Item</h1>
+        <p className="text-sm text-slate-600">
+          Project: <span className="font-medium text-slate-900">{project.name}</span>
+        </p>
       </header>
+
+      {saveError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {saveError}
+        </div>
+      )}
 
       <ItemForm
         initial={initialItem}
@@ -68,4 +76,3 @@ export default function EditItemPage() {
     </div>
   );
 }
-

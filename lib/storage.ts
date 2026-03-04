@@ -1,28 +1,79 @@
 import { Item, Project, QuoteSheetStore, STORAGE_KEY } from "./models";
 
+type LegacyItem = Partial<Item> & {
+  imageBase64?: string;
+};
+
+type LegacyProject = Omit<Project, "items"> & {
+  items?: LegacyItem[];
+};
+
 const isBrowser = () => typeof window !== "undefined";
 
 const emptyStore: QuoteSheetStore = { projects: [] };
+
+function normalizeItem(item: LegacyItem): Item {
+  const images = Array.isArray(item.images)
+    ? item.images.filter((image): image is string => typeof image === "string" && image.length > 0)
+    : item.imageBase64
+      ? [item.imageBase64]
+      : [];
+
+  const previewImageIndex =
+    typeof item.previewImageIndex === "number" && item.previewImageIndex >= 0
+      ? Math.min(item.previewImageIndex, Math.max(images.length - 1, 0))
+      : 0;
+
+  return {
+    id: item.id ?? crypto.randomUUID(),
+    name: item.name ?? "",
+    shortDescription: item.shortDescription ?? "",
+    images,
+    previewImageIndex,
+    material: item.material ?? "",
+    size: item.size ?? "",
+    logo: item.logo ?? "",
+    preProductionSampleTime: item.preProductionSampleTime ?? "",
+    preProductionSampleFee: item.preProductionSampleFee ?? "",
+    packingDetails: item.packingDetails ?? "",
+    priceTiers: Array.isArray(item.priceTiers) ? item.priceTiers : [],
+  };
+}
+
+function normalizeProject(project: LegacyProject): Project {
+  return {
+    id: project.id,
+    name: project.name,
+    client: project.client,
+    notes: project.notes,
+    createdAt: project.createdAt,
+    items: Array.isArray(project.items) ? project.items.map(normalizeItem) : [],
+  };
+}
 
 function readStore(): QuoteSheetStore {
   if (!isBrowser()) return emptyStore;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return emptyStore;
-    const parsed = JSON.parse(raw) as QuoteSheetStore;
+    const parsed = JSON.parse(raw) as { projects?: LegacyProject[] };
     if (!Array.isArray(parsed.projects)) return emptyStore;
-    return parsed;
+
+    return {
+      projects: parsed.projects.map(normalizeProject),
+    };
   } catch {
     return emptyStore;
   }
 }
 
-function writeStore(store: QuoteSheetStore) {
-  if (!isBrowser()) return;
+function writeStore(store: QuoteSheetStore): boolean {
+  if (!isBrowser()) return false;
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+    return true;
   } catch {
-    // ignore quota / serialization issues for this demo
+    return false;
   }
 }
 
@@ -62,7 +113,10 @@ export function upsertItem(projectId: string, item: Item): Project | undefined {
 
   const updatedProject: Project = { ...project, items };
   store.projects[projectIndex] = updatedProject;
-  writeStore(store);
+
+  const didSave = writeStore(store);
+  if (!didSave) return undefined;
+
   return updatedProject;
 }
 
@@ -78,7 +132,10 @@ export function deleteItem(
   const items = project.items.filter((i) => i.id !== itemId);
   const updatedProject: Project = { ...project, items };
   store.projects[projectIndex] = updatedProject;
-  writeStore(store);
+
+  const didSave = writeStore(store);
+  if (!didSave) return undefined;
+
   return updatedProject;
 }
 
