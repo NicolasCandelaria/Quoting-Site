@@ -8,14 +8,17 @@ type ItemImageCompat = Item & {
 
 export function getItemPreviewImage(item: Item): string {
   const source = item as ItemImageCompat;
-
-  if (typeof source.imageBase64 === "string" && source.imageBase64) {
-    return source.imageBase64;
-  }
-
   const images = Array.isArray(source.images) ? source.images : [];
   const previewIndex =
     typeof source.previewImageIndex === "number" ? source.previewImageIndex : 0;
 
-  return images[previewIndex] || images[0] || "";
+  if (images[previewIndex]) {
+    return images[previewIndex];
+  }
+
+  if (images[0]) {
+    return images[0];
+  }
+
+  return source.imageBase64 ?? "";
 }

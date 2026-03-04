@@ -1,33 +1,53 @@
 import { Item, Project, QuoteSheetStore, STORAGE_KEY } from "./models";
 
+type LegacyItem = Partial<Item> & {
+  imageBase64?: string;
+};
+
+type LegacyProject = Omit<Project, "items"> & {
+  items?: LegacyItem[];
+};
+
 const isBrowser = () => typeof window !== "undefined";
 
 const emptyStore: QuoteSheetStore = { projects: [] };
 
-function normalizeStore(raw: QuoteSheetStore): QuoteSheetStore {
+function normalizeItem(item: LegacyItem): Item {
+  const images = Array.isArray(item.images)
+    ? item.images.filter((image): image is string => typeof image === "string" && image.length > 0)
+    : item.imageBase64
+      ? [item.imageBase64]
+      : [];
+
+  const previewImageIndex =
+    typeof item.previewImageIndex === "number" && item.previewImageIndex >= 0
+      ? Math.min(item.previewImageIndex, Math.max(images.length - 1, 0))
+      : 0;
+
   return {
-    projects: (raw.projects ?? []).map((project) => ({
-      ...project,
-      items: (project.items ?? []).map((item: any) => {
-        const images: string[] =
-          Array.isArray(item.images) && item.images.length > 0
-            ? item.images
-            : item.imageBase64
-              ? [item.imageBase64 as string]
-              : [];
-        const previewImageIndex: number =
-          typeof item.previewImageIndex === "number" &&
-          item.previewImageIndex >= 0 &&
-          item.previewImageIndex < images.length
-            ? item.previewImageIndex
-            : 0;
-        return {
-          ...item,
-          images,
-          previewImageIndex,
-        };
-      }),
-    })),
+    id: item.id ?? crypto.randomUUID(),
+    name: item.name ?? "",
+    shortDescription: item.shortDescription ?? "",
+    images,
+    previewImageIndex,
+    material: item.material ?? "",
+    size: item.size ?? "",
+    logo: item.logo ?? "",
+    preProductionSampleTime: item.preProductionSampleTime ?? "",
+    preProductionSampleFee: item.preProductionSampleFee ?? "",
+    packingDetails: item.packingDetails ?? "",
+    priceTiers: Array.isArray(item.priceTiers) ? item.priceTiers : [],
+  };
+}
+
+function normalizeProject(project: LegacyProject): Project {
+  return {
+    id: project.id,
+    name: project.name,
+    client: project.client,
+    notes: project.notes,
+    createdAt: project.createdAt,
+    items: Array.isArray(project.items) ? project.items.map(normalizeItem) : [],
   };
 }
 
@@ -36,9 +56,12 @@ function readStore(): QuoteSheetStore {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return emptyStore;
-    const parsed = JSON.parse(raw) as QuoteSheetStore;
+    const parsed = JSON.parse(raw) as { projects?: LegacyProject[] };
     if (!Array.isArray(parsed.projects)) return emptyStore;
-    return normalizeStore(parsed);
+
+    return {
+      projects: parsed.projects.map(normalizeProject),
+    };
   } catch {
     return emptyStore;
   }
@@ -50,7 +73,6 @@ function writeStore(store: QuoteSheetStore): boolean {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
     return true;
   } catch {
-    // localStorage can fail (most often quota exceeded with large base64 images)
     return false;
   }
 }

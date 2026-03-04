@@ -28,6 +28,11 @@ export default function ClientItemPage() {
     void load();
   }, [projectId, itemId]);
 
+  useEffect(() => {
+    if (!item) return;
+    setActiveImageIndex(item.previewImageIndex ?? 0);
+  }, [item]);
+
   const sortedTiers: PriceTier[] = useMemo(() => {
     const tiers = item?.priceTiers ?? [];
     return [...tiers].sort((a, b) => {
@@ -39,6 +44,17 @@ export default function ClientItemPage() {
   if (!project || !item) {
     return <p className="text-sm text-zinc-600">Loading item details...</p>;
   }
+
+  const itemImages = item.images.length > 0
+    ? item.images
+    : getItemPreviewImage(item)
+      ? [getItemPreviewImage(item)]
+      : [];
+
+  const normalizedImageIndex =
+    activeImageIndex >= 0 && activeImageIndex < itemImages.length
+      ? activeImageIndex
+      : Math.min(item.previewImageIndex ?? 0, Math.max(itemImages.length - 1, 0));
 
   const clientLink =
     typeof window !== "undefined"
@@ -71,12 +87,60 @@ export default function ClientItemPage() {
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-        <section className="card overflow-hidden">
+        <section className="card space-y-3 overflow-hidden p-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          {getItemPreviewImage(item) ? (
-            <img src={getItemPreviewImage(item)} alt={item.name} className="h-72 w-full object-cover sm:h-80" />
+          {itemImages.length > 0 ? (
+            <img
+              src={itemImages[normalizedImageIndex]}
+              alt={item.name}
+              className="h-72 w-full rounded-lg object-cover sm:h-80"
+            />
           ) : (
-            <div className="flex h-72 w-full items-center justify-center bg-zinc-100 text-sm text-zinc-500 sm:h-80">No image provided</div>
+            <div className="flex h-72 w-full items-center justify-center rounded-lg bg-zinc-100 text-sm text-zinc-500 sm:h-80">No image provided</div>
+          )}
+
+          {itemImages.length > 1 && (
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-2">
+                {itemImages.map((imageUrl, index) => (
+                  <button
+                    key={`${imageUrl}-${index}`}
+                    type="button"
+                    className={`overflow-hidden rounded border ${
+                      index === normalizedImageIndex ? "border-brand-500" : "border-zinc-200"
+                    }`}
+                    onClick={() => setActiveImageIndex(index)}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={imageUrl} alt={`Item image ${index + 1}`} className="h-14 w-14 object-cover" />
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="btn-secondary !px-3 !py-1 text-xs"
+                  onClick={() =>
+                    setActiveImageIndex((prev) =>
+                      prev <= 0 ? itemImages.length - 1 : prev - 1,
+                    )
+                  }
+                >
+                  Prev
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary !px-3 !py-1 text-xs"
+                  onClick={() =>
+                    setActiveImageIndex((prev) =>
+                      prev >= itemImages.length - 1 ? 0 : prev + 1,
+                    )
+                  }
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           )}
 
           <p className="text-[11px] text-zinc-500">

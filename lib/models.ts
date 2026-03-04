@@ -8,14 +8,7 @@ export type Item = {
   id: string;
   name: string;
   shortDescription: string;
-  /**
-   * All product images stored as base64 data URLs.
-   * The image at index previewImageIndex is used as the primary thumbnail.
-   */
   images: string[];
-  /**
-   * Index into the images array that should be used as the preview/primary image.
-   */
   previewImageIndex: number;
   material: string;
   size: string;

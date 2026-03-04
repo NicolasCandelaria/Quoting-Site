@@ -1,9 +1,7 @@
 import type { Item, Project } from "@/lib/models";
 
-type ItemCompat = Item & {
+type ItemCompat = Partial<Item> & {
   imageBase64?: string;
-  images?: string[];
-  previewImageIndex?: number;
 };
 
 type SupabaseRowProject = {
@@ -19,6 +17,8 @@ type SupabaseRowItem = {
   project_id: string;
   name: string;
   short_description: string;
+  image_urls: string[] | null;
+  preview_image_index: number | null;
   image_base64: string | null;
   material: string;
   size: string;
@@ -74,10 +74,25 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 function toItem(row: SupabaseRowItem): Item {
-  const item = {
+  const fallbackImage = row.image_base64 ?? "";
+  const images =
+    Array.isArray(row.image_urls) && row.image_urls.length > 0
+      ? row.image_urls
+      : fallbackImage
+        ? [fallbackImage]
+        : [];
+
+  const previewImageIndex =
+    typeof row.preview_image_index === "number" && row.preview_image_index >= 0
+      ? Math.min(row.preview_image_index, Math.max(images.length - 1, 0))
+      : 0;
+
+  return {
     id: row.id,
     name: row.name,
     shortDescription: row.short_description,
+    images,
+    previewImageIndex,
     material: row.material,
     size: row.size,
     logo: row.logo,
@@ -85,18 +100,7 @@ function toItem(row: SupabaseRowItem): Item {
     preProductionSampleFee: row.pre_production_sample_fee,
     packingDetails: row.packing_details,
     priceTiers: Array.isArray(row.price_tiers) ? row.price_tiers : [],
-  } as ItemCompat;
-
-  // Backward/forward compatible image mapping across single-image and multi-image models.
-  item.imageBase64 = row.image_base64 ?? "";
-  if (!item.images) {
-    item.images = item.imageBase64 ? [item.imageBase64] : [];
-  }
-  if (typeof item.previewImageIndex !== "number") {
-    item.previewImageIndex = 0;
-  }
-
-  return item as Item;
+  };
 }
 
 function toProject(row: SupabaseRowProject, items: Item[]): Project {
@@ -112,15 +116,25 @@ function toProject(row: SupabaseRowProject, items: Item[]): Project {
 
 function toItemInsert(projectId: string, item: Item) {
   const source = item as ItemCompat;
-  const fallbackFromGallery = source.images?.[source.previewImageIndex ?? 0] ?? source.images?.[0] ?? "";
-  const imageBase64 = source.imageBase64 ?? fallbackFromGallery;
+  const images =
+    Array.isArray(source.images) && source.images.length > 0
+      ? source.images
+      : source.imageBase64
+        ? [source.imageBase64]
+        : [];
+  const previewImageIndex =
+    typeof source.previewImageIndex === "number" && source.previewImageIndex >= 0
+      ? Math.min(source.previewImageIndex, Math.max(images.length - 1, 0))
+      : 0;
 
   return {
     id: item.id,
     project_id: projectId,
     name: item.name,
     short_description: item.shortDescription,
-    image_base64: imageBase64 || null,
+    image_urls: images,
+    preview_image_index: previewImageIndex,
+    image_base64: images[previewImageIndex] ?? images[0] ?? null,
     material: item.material,
     size: item.size,
     logo: item.logo,
@@ -139,7 +153,7 @@ export async function listProjectsFromSupabase(): Promise<Project[]> {
   if (projectRows.length === 0) return [];
 
   const itemRows = await request<SupabaseRowItem[]>(
-    "/items?select=id,project_id,name,short_description,image_base64,material,size,logo,pre_production_sample_time,pre_production_sample_fee,packing_details,price_tiers",
+    "/items?select=id,project_id,name,short_description,image_urls,preview_image_index,image_base64,material,size,logo,pre_production_sample_time,pre_production_sample_fee,packing_details,price_tiers",
   );
 
   return projectRows.map((project) => {
@@ -161,7 +175,7 @@ export async function getProjectFromSupabase(
   if (!project) return undefined;
 
   const itemRows = await request<SupabaseRowItem[]>(
-    `/items?select=id,project_id,name,short_description,image_base64,material,size,logo,pre_production_sample_time,pre_production_sample_fee,packing_details,price_tiers&project_id=eq.${projectId}`,
+    `/items?select=id,project_id,name,short_description,image_urls,preview_image_index,image_base64,material,size,logo,pre_production_sample_time,pre_production_sample_fee,packing_details,price_tiers&project_id=eq.${projectId}`,
   );
 
   return toProject(project, itemRows.map(toItem));
@@ -191,7 +205,6 @@ export async function createProjectInSupabase(input: {
   return toProject(row, []);
 }
 
-
 export async function saveProjectInSupabase(project: Project): Promise<Project> {
   const rows = await request<SupabaseRowProject[]>(
     "/projects?id=eq." + project.id + "&select=id,name,client,notes,created_at",
@@ -212,27 +225,20 @@ export async function saveProjectInSupabase(project: Project): Promise<Project> 
   }
 
   const current = await getProjectFromSupabase(project.id);
-  if (!current) {
-    return toProject(row, []);
-  }
-
-  return { ...current, ...toProject(row, current.items) };
+  return toProject(row, current?.items ?? []);
 }
 
 export async function upsertItemInSupabase(
   projectId: string,
   item: Item,
 ): Promise<Project | undefined> {
-  await request<SupabaseRowItem[]>(
-    "/items?on_conflict=id&select=id",
-    {
-      method: "POST",
-      headers: {
-        Prefer: "resolution=merge-duplicates,return=representation",
-      },
-      body: JSON.stringify([toItemInsert(projectId, item)]),
+  await request<SupabaseRowItem[]>("/items?on_conflict=id&select=id", {
+    method: "POST",
+    headers: {
+      Prefer: "resolution=merge-duplicates,return=representation",
     },
-  );
+    body: JSON.stringify([toItemInsert(projectId, item)]),
+  });
 
   return getProjectFromSupabase(projectId);
 }

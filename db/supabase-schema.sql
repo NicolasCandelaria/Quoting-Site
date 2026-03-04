@@ -1,6 +1,3 @@
--- Supabase schema for quote-sheet prototype
--- Run in Supabase SQL editor.
-
 create extension if not exists pgcrypto;
 
 create table if not exists public.projects (
@@ -15,7 +12,9 @@ create table if not exists public.items (
   id uuid primary key,
   project_id uuid not null references public.projects(id) on delete cascade,
   name text not null,
-  short_description text not null,
+  short_description text not null default '',
+  image_urls jsonb not null default '[]'::jsonb,
+  preview_image_index integer not null default 0,
   image_base64 text,
   material text not null default '',
   size text not null default '',
@@ -23,11 +22,31 @@ create table if not exists public.items (
   pre_production_sample_time text not null default '',
   pre_production_sample_fee text not null default '',
   packing_details text not null default '',
-  price_tiers jsonb not null default '[]'::jsonb
+  price_tiers jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
-create index if not exists idx_items_project_id on public.items(project_id);
+alter table public.items
+  add column if not exists image_urls jsonb not null default '[]'::jsonb;
 
--- optional: enable row-level security for future auth hardening
-alter table public.projects enable row level security;
-alter table public.items enable row level security;
+alter table public.items
+  add column if not exists preview_image_index integer not null default 0;
+
+alter table public.items
+  add column if not exists image_base64 text;
+
+update public.items
+set image_urls =
+  case
+    when jsonb_typeof(image_urls) = 'array' and jsonb_array_length(image_urls) > 0 then image_urls
+    when image_base64 is not null and image_base64 <> '' then jsonb_build_array(image_base64)
+    else '[]'::jsonb
+  end
+where image_urls is null or image_urls = '[]'::jsonb;
+
+update public.items
+set preview_image_index = 0
+where preview_image_index is null or preview_image_index < 0;
+
+create index if not exists idx_items_project_id on public.items(project_id);
