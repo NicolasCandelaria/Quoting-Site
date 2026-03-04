@@ -17,8 +17,8 @@ type SupabaseRowItem = {
   project_id: string;
   name: string;
   short_description: string;
-  image_urls: string[] | null;
-  preview_image_index: number | null;
+  image_urls?: string[] | null;
+  preview_image_index?: number | null;
   image_base64: string | null;
   material: string;
   size: string;
@@ -47,6 +47,15 @@ function headers() {
     Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY as string}`,
     "Content-Type": "application/json",
   };
+}
+
+function isMissingMultiImageColumnError(error: unknown) {
+  const message = error instanceof Error ? error.message : "";
+  return (
+    message.includes("42703") &&
+    (message.includes("items.image_urls") ||
+      message.includes("items.preview_image_index"))
+  );
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -145,6 +154,44 @@ function toItemInsert(projectId: string, item: Item) {
   };
 }
 
+function toLegacyItemInsert(projectId: string, item: Item) {
+  const images = Array.isArray(item.images) ? item.images : [];
+  const primary = images[item.previewImageIndex] ?? images[0] ?? null;
+
+  return {
+    id: item.id,
+    project_id: projectId,
+    name: item.name,
+    short_description: item.shortDescription,
+    image_base64: primary,
+    material: item.material,
+    size: item.size,
+    logo: item.logo,
+    pre_production_sample_time: item.preProductionSampleTime,
+    pre_production_sample_fee: item.preProductionSampleFee,
+    packing_details: item.packingDetails,
+    price_tiers: item.priceTiers,
+  };
+}
+
+async function listItemsFromSupabase(projectId?: string) {
+  const projectFilter = projectId ? `&project_id=eq.${projectId}` : "";
+
+  try {
+    return await request<SupabaseRowItem[]>(
+      `/items?select=id,project_id,name,short_description,image_urls,preview_image_index,image_base64,material,size,logo,pre_production_sample_time,pre_production_sample_fee,packing_details,price_tiers${projectFilter}`,
+    );
+  } catch (error) {
+    if (!isMissingMultiImageColumnError(error)) {
+      throw error;
+    }
+
+    return request<SupabaseRowItem[]>(
+      `/items?select=id,project_id,name,short_description,image_base64,material,size,logo,pre_production_sample_time,pre_production_sample_fee,packing_details,price_tiers${projectFilter}`,
+    );
+  }
+}
+
 export async function listProjectsFromSupabase(): Promise<Project[]> {
   const projectRows = await request<SupabaseRowProject[]>(
     "/projects?select=id,name,client,notes,created_at&order=created_at.desc",
@@ -152,9 +199,7 @@ export async function listProjectsFromSupabase(): Promise<Project[]> {
 
   if (projectRows.length === 0) return [];
 
-  const itemRows = await request<SupabaseRowItem[]>(
-    "/items?select=id,project_id,name,short_description,image_urls,preview_image_index,image_base64,material,size,logo,pre_production_sample_time,pre_production_sample_fee,packing_details,price_tiers",
-  );
+  const itemRows = await listItemsFromSupabase();
 
   return projectRows.map((project) => {
     const items = itemRows
@@ -174,9 +219,7 @@ export async function getProjectFromSupabase(
   const project = projects[0];
   if (!project) return undefined;
 
-  const itemRows = await request<SupabaseRowItem[]>(
-    `/items?select=id,project_id,name,short_description,image_urls,preview_image_index,image_base64,material,size,logo,pre_production_sample_time,pre_production_sample_fee,packing_details,price_tiers&project_id=eq.${projectId}`,
-  );
+  const itemRows = await listItemsFromSupabase(projectId);
 
   return toProject(project, itemRows.map(toItem));
 }
@@ -232,13 +275,27 @@ export async function upsertItemInSupabase(
   projectId: string,
   item: Item,
 ): Promise<Project | undefined> {
-  await request<SupabaseRowItem[]>("/items?on_conflict=id&select=id", {
-    method: "POST",
-    headers: {
-      Prefer: "resolution=merge-duplicates,return=representation",
-    },
-    body: JSON.stringify([toItemInsert(projectId, item)]),
-  });
+  try {
+    await request<SupabaseRowItem[]>("/items?on_conflict=id&select=id", {
+      method: "POST",
+      headers: {
+        Prefer: "resolution=merge-duplicates,return=representation",
+      },
+      body: JSON.stringify([toItemInsert(projectId, item)]),
+    });
+  } catch (error) {
+    if (!isMissingMultiImageColumnError(error)) {
+      throw error;
+    }
+
+    await request<SupabaseRowItem[]>("/items?on_conflict=id&select=id", {
+      method: "POST",
+      headers: {
+        Prefer: "resolution=merge-duplicates,return=representation",
+      },
+      body: JSON.stringify([toLegacyItemInsert(projectId, item)]),
+    });
+  }
 
   return getProjectFromSupabase(projectId);
 }
