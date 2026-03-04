@@ -21,11 +21,6 @@
         "./*"
       ]
     },
-    "types": [
-      "next",
-      "next/image-types",
-      "next/navigation"
-    ],
     "incremental": true,
     "plugins": [
       {
