@@ -4,25 +4,48 @@ import { useCallback, useRef, useState } from "react";
 
 type Props = {
   value: string;
-  onChange: (dataUrl: string) => void;
+  onChange: (url: string) => void;
 };
 
 export function ImageDropzone({ value, onChange }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleFiles = useCallback(
-    (files: FileList | null) => {
+    async (files: FileList | null) => {
       const file = files?.[0];
       if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result;
-        if (typeof result === "string") {
-          onChange(result);
+
+      setError("");
+      setUploading(true);
+
+      try {
+        const form = new FormData();
+        form.append("file", file);
+
+        const response = await fetch("/api/uploads", {
+          method: "POST",
+          body: form,
+        });
+
+        const body = (await response.json()) as { url?: string; error?: string };
+
+        if (!response.ok || !body.url) {
+          throw new Error(body.error || "Image upload failed.");
         }
-      };
-      reader.readAsDataURL(file);
+
+        onChange(body.url);
+      } catch (uploadError) {
+        const message =
+          uploadError instanceof Error
+            ? uploadError.message
+            : "Image upload failed.";
+        setError(message);
+      } finally {
+        setUploading(false);
+      }
     },
     [onChange],
   );
@@ -30,7 +53,7 @@ export function ImageDropzone({ value, onChange }: Props) {
   return (
     <div className="flex flex-col gap-3">
       <div
-        className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-6 text-center text-xs sm:text-sm transition ${
+        className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-6 text-center text-xs sm:text-sm transition ${
           isDragging
             ? "border-brand-500 bg-brand-50"
             : "border-slate-300 bg-slate-50"
@@ -46,7 +69,7 @@ export function ImageDropzone({ value, onChange }: Props) {
         onDrop={(e) => {
           e.preventDefault();
           setIsDragging(false);
-          handleFiles(e.dataTransfer.files);
+          void handleFiles(e.dataTransfer.files);
         }}
         onClick={() => inputRef.current?.click()}
       >
@@ -55,7 +78,7 @@ export function ImageDropzone({ value, onChange }: Props) {
         </p>
         <p className="mt-1 text-slate-500">or click to browse</p>
         <p className="mt-2 text-[11px] text-slate-400">
-          JPG, PNG or GIF. Stored locally in your browser only.
+          JPG, PNG or GIF. Uploaded to cloud storage.
         </p>
       </div>
 
@@ -64,12 +87,22 @@ export function ImageDropzone({ value, onChange }: Props) {
         type="file"
         accept="image/*"
         className="hidden"
-        onChange={(e) => handleFiles(e.target.files)}
+        onChange={(e) => {
+          void handleFiles(e.target.files);
+        }}
       />
+
+      {uploading && (
+        <p className="text-xs text-slate-500">Uploading image…</p>
+      )}
+
+      {error && (
+        <p className="text-xs text-red-600">{error}</p>
+      )}
 
       {value && (
         <div className="mt-1">
-          <p className="text-xs font-medium text-slate-700 mb-1">Preview</p>
+          <p className="mb-1 text-xs font-medium text-slate-700">Preview</p>
           <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -83,4 +116,3 @@ export function ImageDropzone({ value, onChange }: Props) {
     </div>
   );
 }
-
