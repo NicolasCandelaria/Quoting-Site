@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { Project, Item, PriceTier } from "@/lib/models";
 import { fetchProject } from "@/lib/api";
+import { getItemPreviewImage } from "@/lib/item-image";
 
 export default function ClientItemPage() {
   const params = useParams<{ projectId: string; itemId: string }>();
