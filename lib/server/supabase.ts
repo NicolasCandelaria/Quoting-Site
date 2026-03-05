@@ -1,4 +1,5 @@
 import type { Item, Project } from "@/lib/models";
+import { uploadItemImages } from "./supabase-storage";
 
 type ItemCompat = Partial<Item> & {
   imageBase64?: string;
@@ -50,8 +51,12 @@ function headers() {
 }
 
 function isMissingColumnError(error: unknown) {
-  const message = error instanceof Error ? error.message : "";
-  return message.includes("42703") && message.includes("column");
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    (message.includes("42703") && message.includes("column")) ||
+    message.includes("PGRST204") ||
+    (message.includes("Could not find") && message.includes("column"))
+  );
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -313,10 +318,44 @@ export async function upsertItemInSupabase(
   projectId: string,
   item: Item,
 ): Promise<Project | undefined> {
+  const { images, previewImageIndex } = getItemImages(item);
+
+  // Upload any data-URL images to Supabase Storage; keep existing http(s) URLs
+  let imageUrls = images;
+  if (images.some((s) => s.startsWith("data:"))) {
+    imageUrls = await uploadItemImages(images, item.id);
+  }
+
+  const itemWithStorageUrls: Item = {
+    ...item,
+    images: imageUrls,
+    previewImageIndex,
+  };
+
+  // Backup: store preview image as base64 when it was originally base64
+  const backupBase64 =
+    images.length > 0 && images[0]!.startsWith("data:")
+      ? images[previewImageIndex] ?? images[0] ?? null
+      : null;
+
+  const legacyPayload = {
+    ...toItemInsertWithLegacyColumn(projectId, itemWithStorageUrls),
+    ...(backupBase64 ? { image_base64: backupBase64 } : {}),
+  };
+  const fullPayload = {
+    ...toItemInsertWithAllImageColumns(projectId, itemWithStorageUrls),
+    ...(backupBase64 ? { image_base64: backupBase64 } : {}),
+  };
+  const galleryPayload = toItemInsertWithGalleryColumns(
+    projectId,
+    itemWithStorageUrls,
+  );
+
+  // Legacy has no image_urls; full and gallery do. Try gallery/full first, then legacy.
   const payloadCandidates = [
-    toItemInsertWithAllImageColumns(projectId, item),
-    toItemInsertWithGalleryColumns(projectId, item),
-    toItemInsertWithLegacyColumn(projectId, item),
+    fullPayload,
+    galleryPayload,
+    legacyPayload,
   ];
 
   let lastError: unknown;

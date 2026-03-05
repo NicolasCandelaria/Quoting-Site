@@ -1,7 +1,17 @@
 import { NextResponse } from "next/server";
-import { uploadToVercelBlob } from "@/lib/server/blob";
+import {
+  uploadFile,
+  isSupabaseStorageConfigured,
+} from "@/lib/server/supabase-storage";
 
 export async function POST(request: Request) {
+  if (!isSupabaseStorageConfigured()) {
+    return NextResponse.json(
+      { error: "Supabase Storage is not configured." },
+      { status: 503 },
+    );
+  }
+
   const formData = await request.formData();
   const file = formData.get("file");
 
@@ -10,7 +20,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const url = await uploadToVercelBlob(file);
+    const url = await uploadFile(file);
     return NextResponse.json({ url }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Upload failed.";

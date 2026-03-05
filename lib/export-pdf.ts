@@ -1,6 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import type { Project, Item, PriceTier } from "@/lib/models";
-import { getItemPreviewImage } from "@/lib/item-image";
 
 function dataUrlToUint8Array(dataUrl: string): Uint8Array | null {
   const parts = dataUrl.split(",");
@@ -19,22 +18,39 @@ function dataUrlToUint8Array(dataUrl: string): Uint8Array | null {
   }
 }
 
+async function getImageBytes(src: string): Promise<Uint8Array | null> {
+  if (src.startsWith("http://") || src.startsWith("https://")) {
+    try {
+      const res = await fetch(src, { cache: "no-store" });
+      if (!res.ok) return null;
+      const buf = await res.arrayBuffer();
+      return new Uint8Array(buf);
+    } catch {
+      return null;
+    }
+  }
+  return dataUrlToUint8Array(src);
+}
+
 async function embedItemImages(doc: PDFDocument, item: Item) {
   const images: string[] = Array.isArray(item.images) ? item.images : [];
   const result: { width: number; height: number; ref: any }[] = [];
 
-  for (const dataUrl of images) {
-    const bytes = dataUrlToUint8Array(dataUrl);
-    if (!bytes) continue;
+  for (const src of images) {
+    const bytes = await getImageBytes(src);
+    if (!bytes || bytes.length === 0) continue;
     try {
-      // Try PNG first, then JPEG fallback
       let image;
-      if (dataUrl.startsWith("data:image/png")) {
+      if (src.startsWith("data:image/png") || src.endsWith(".png")) {
         image = await doc.embedPng(bytes);
-      } else if (dataUrl.startsWith("data:image/jpeg") || dataUrl.startsWith("data:image/jpg")) {
+      } else if (
+        src.startsWith("data:image/jpeg") ||
+        src.startsWith("data:image/jpg") ||
+        src.endsWith(".jpg") ||
+        src.endsWith(".jpeg")
+      ) {
         image = await doc.embedJpg(bytes);
       } else {
-        // Heuristic: try PNG, then JPEG
         try {
           image = await doc.embedPng(bytes);
         } catch {
