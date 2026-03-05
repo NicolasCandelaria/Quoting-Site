@@ -53,6 +53,16 @@ export async function updateProject(project: Project): Promise<Project> {
   return body.project;
 }
 
+export async function deleteProject(projectId: string): Promise<void> {
+  const response = await fetch(`/api/projects/${projectId}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    const body = (await response.json()) as { error?: string };
+    throw new Error(body.error ?? `Request failed (${response.status})`);
+  }
+}
+
 export async function createOrUpdateItem(
   projectId: string,
   item: Item,

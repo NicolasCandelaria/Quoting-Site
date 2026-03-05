@@ -6,7 +6,8 @@ import { FormEvent, useEffect, useState } from "react";
 import type { Project, Item } from "@/lib/models";
 import { getItemPreviewImage } from "@/lib/item-image";
 import { exportProjectPdf } from "@/lib/export-pdf";
-import { fetchProject, removeItem, updateProject } from "@/lib/api";
+import { fetchProject, removeItem, updateProject, deleteProject } from "@/lib/api";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export default function ProjectDetailPage() {
   const params = useParams<{ projectId: string }>();
@@ -19,6 +20,8 @@ export default function ProjectDetailPage() {
   const [savedNotice, setSavedNotice] = useState<string>("");
   const [copied, setCopied] = useState<boolean>(false);
   const [exporting, setExporting] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
+  const [confirmDeleteProject, setConfirmDeleteProject] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -97,17 +100,27 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const handleDeleteItem = async (item: Item) => {
-    const confirmed = window.confirm(
-      `Remove "${item.name}" from this project? This cannot be undone.`,
-    );
-    if (!confirmed) return;
-
+  const handleConfirmDeleteItem = async () => {
+    if (!itemToDelete || !project) return;
     try {
-      const updated = await removeItem(projectId, item.id);
+      const updated = await removeItem(projectId, itemToDelete.id);
       setProject(updated);
+      setItemToDelete(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not delete item.");
+      setItemToDelete(null);
+    }
+  };
+
+  const handleConfirmDeleteProject = async () => {
+    if (!project) return;
+    try {
+      await deleteProject(project.id);
+      setConfirmDeleteProject(false);
+      router.push("/admin");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not delete project.");
+      setConfirmDeleteProject(false);
     }
   };
 
@@ -220,8 +233,8 @@ export default function ProjectDetailPage() {
                   </div>
                 </button>
                 <div className="flex items-center justify-between gap-2 border-t border-slate-100 px-3 py-2">
-                  <button type="button" className="text-[11px] text-slate-500 hover:text-red-500" onClick={() => void handleDeleteItem(item)}>
-                    Delete
+                  <button type="button" className="text-[11px] text-slate-500 hover:text-red-500" onClick={() => setItemToDelete(item)}>
+                    Remove item
                   </button>
                   <button
                     type="button"
@@ -236,6 +249,50 @@ export default function ProjectDetailPage() {
           </div>
         )}
       </section>
+
+      <section className="card max-w-xl p-5 border-red-200">
+        <h2 className="text-base font-semibold text-zinc-950">Danger zone</h2>
+        <p className="mt-1 text-sm text-zinc-600">
+          Removing this project will delete all items and cannot be undone.
+        </p>
+        <button
+          type="button"
+          className="mt-3 text-sm font-medium text-red-600 hover:text-red-700"
+          onClick={() => setConfirmDeleteProject(true)}
+        >
+          Remove project
+        </button>
+      </section>
+
+      <ConfirmDialog
+        open={itemToDelete !== null}
+        title="Remove item"
+        message={
+          itemToDelete
+            ? `Remove "${itemToDelete.name}" from this project? This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Remove item"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => void handleConfirmDeleteItem()}
+        onCancel={() => setItemToDelete(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteProject}
+        title="Remove project"
+        message={
+          project
+            ? `Remove "${project.name}" and all its items? This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Remove project"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => void handleConfirmDeleteProject()}
+        onCancel={() => setConfirmDeleteProject(false)}
+      />
     </div>
   );
 }

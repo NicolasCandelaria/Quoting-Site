@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  deleteProjectInSupabase,
   getProjectFromSupabase,
   isSupabaseConfigured,
   saveProjectInSupabase,
@@ -55,6 +56,28 @@ export async function POST(
   try {
     const project = await saveProjectInSupabase(payload.project);
     return NextResponse.json({ project });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error.";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  _request: Request,
+  context: { params: Promise<{ projectId: string }> },
+) {
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json(
+      { error: "Supabase is not configured." },
+      { status: 500 },
+    );
+  }
+
+  const { projectId } = await context.params;
+
+  try {
+    await deleteProjectInSupabase(projectId);
+    return new NextResponse(null, { status: 204 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error.";
     return NextResponse.json({ error: message }, { status: 500 });

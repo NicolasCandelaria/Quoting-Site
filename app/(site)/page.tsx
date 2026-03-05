@@ -7,15 +7,11 @@ export default function HomePage() {
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-3">
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-950 sm:text-3xl">
-          Quote Sheet Demo
+          Quote Sheet
         </h1>
         <p className="text-sm text-zinc-600 max-w-xl">
-          Lightweight internal tool for building client-facing project quote
-          sheets. All data is stored locally in your browser via{" "}
-          <code className="rounded bg-zinc-100 px-1 py-0.5 text-xs">
-            localStorage
-          </code>
-          .
+          Build and share client-facing quote sheets. Create projects, add items
+          with pricing, and export PDFs for procurement.
         </p>
       </header>
 

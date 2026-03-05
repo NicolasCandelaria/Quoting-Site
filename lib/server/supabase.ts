@@ -385,6 +385,15 @@ export async function deleteItemInSupabase(
   return getProjectFromSupabase(projectId);
 }
 
+export async function deleteProjectInSupabase(
+  projectId: string,
+): Promise<void> {
+  await request<void>(`/items?project_id=eq.${projectId}`, {
+    method: "DELETE",
+  });
+  await request<void>(`/projects?id=eq.${projectId}`, { method: "DELETE" });
+}
+
 export function isSupabaseConfigured() {
   return Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
 }

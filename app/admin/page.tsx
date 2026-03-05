@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Project } from "@/lib/models";
-import { fetchProjects } from "@/lib/api";
+import { fetchProjects, deleteProject } from "@/lib/api";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export default function AdminHomePage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -26,6 +28,18 @@ export default function AdminHomePage() {
 
     void load();
   }, []);
+
+  const handleConfirmDeleteProject = async () => {
+    if (!projectToDelete) return;
+    try {
+      await deleteProject(projectToDelete.id);
+      setProjects((prev) => prev.filter((p) => p.id !== projectToDelete.id));
+      setProjectToDelete(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not delete project.");
+      setProjectToDelete(null);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -66,36 +80,67 @@ export default function AdminHomePage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {projects.map((project) => (
-            <Link
+            <div
               key={project.id}
-              href={`/admin/projects/${project.id}`}
               className="card flex flex-col gap-3 p-4 transition hover:border-brand-100 hover:shadow-lg"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h2 className="text-sm font-semibold text-slate-900">
-                    {project.name}
-                  </h2>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    Client:{" "}
-                    <span className="font-medium text-slate-800">
-                      {project.client}
-                    </span>
-                  </p>
+              <Link
+                href={`/admin/projects/${project.id}`}
+                className="flex flex-1 flex-col gap-3"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-sm font-semibold text-slate-900">
+                      {project.name}
+                    </h2>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      Client:{" "}
+                      <span className="font-medium text-slate-800">
+                        {project.client}
+                      </span>
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                    {project.items.length} item{project.items.length === 1 ? "" : "s"}
+                  </span>
                 </div>
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
-                  {project.items.length} item{project.items.length === 1 ? "" : "s"}
-                </span>
+                {project.notes && (
+                  <p className="line-clamp-3 whitespace-pre-line text-xs text-slate-600">
+                    {project.notes}
+                  </p>
+                )}
+              </Link>
+              <div className="flex justify-end border-t border-slate-100 pt-2 mt-1">
+                <button
+                  type="button"
+                  className="text-xs font-medium text-red-600 hover:text-red-700"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setProjectToDelete(project);
+                  }}
+                >
+                  Remove project
+                </button>
               </div>
-              {project.notes && (
-                <p className="line-clamp-3 whitespace-pre-line text-xs text-slate-600">
-                  {project.notes}
-                </p>
-              )}
-            </Link>
+            </div>
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={projectToDelete !== null}
+        title="Remove project"
+        message={
+          projectToDelete
+            ? `Remove "${projectToDelete.name}" and all its items? This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Remove project"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => void handleConfirmDeleteProject()}
+        onCancel={() => setProjectToDelete(null)}
+      />
     </div>
   );
 }

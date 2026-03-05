@@ -3,8 +3,8 @@ import "./globals.css";
 import { TopNav } from "@/components/TopNav";
 
 export const metadata = {
-  title: "Quote Sheet Demo",
-  description: "Lightweight quote sheet MVP for internal demos",
+  title: "Quote Sheet",
+  description: "Build and share client-facing quote sheets",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
