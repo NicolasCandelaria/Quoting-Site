@@ -379,8 +379,13 @@ export async function exportProjectPdf(project: Project) {
     });
   }
 
-  const pdfBytes = await pdfDoc.save();
-  const blob = new Blob([pdfBytes], { type: "application/pdf" });
+const pdfBytes = await pdfDoc.save();
+
+// Normalize to a plain ArrayBuffer-backed typed array for Blob typing.
+const normalizedPdfBytes = new Uint8Array(pdfBytes);
+const blob = new Blob([normalizedPdfBytes.buffer], {
+  type: "application/pdf",
+});
   const url = URL.createObjectURL(blob);
 
   const link = document.createElement("a");
