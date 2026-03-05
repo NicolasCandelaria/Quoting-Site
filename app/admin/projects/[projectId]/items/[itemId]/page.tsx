@@ -51,6 +51,7 @@ export default function EditItemPage() {
         message,
       );
     }
+  };
 
   if (!project || !initialItem) {
     return <p className="text-sm text-slate-600">Loading item details...</p>;
@@ -63,7 +64,8 @@ export default function EditItemPage() {
           Edit Item
         </h1>
         <p className="text-sm text-slate-600">
-          Project: <span className="font-medium text-slate-900">{project.name}</span>
+          Project:{" "}
+          <span className="font-medium text-slate-900">{project.name}</span>
         </p>
       </header>
 

@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import type { Project, Item } from "@/lib/models";
 import { getItemPreviewImage } from "@/lib/item-image";
+import { exportProjectPdf } from "@/lib/export-pdf";
 import { fetchProject, removeItem, updateProject } from "@/lib/api";
 
 export default function ProjectDetailPage() {
@@ -17,6 +18,7 @@ export default function ProjectDetailPage() {
   const [error, setError] = useState("");
   const [savedNotice, setSavedNotice] = useState<string>("");
   const [copied, setCopied] = useState<boolean>(false);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -79,6 +81,22 @@ export default function ProjectDetailPage() {
     }
   };
 
+  const handleExportPdf = async () => {
+    if (!project || exporting) return;
+    try {
+      setExporting(true);
+      await exportProjectPdf(project);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not generate procurement PDF.",
+      );
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const handleDeleteItem = async (item: Item) => {
     const confirmed = window.confirm(
       `Remove "${item.name}" from this project? This cannot be undone.`,
@@ -126,6 +144,14 @@ export default function ProjectDetailPage() {
           </Link>
           <button type="button" className="btn-secondary text-xs sm:text-sm" onClick={handleCopyLink}>
             {copied ? "Copied" : "Copy Client Link"}
+          </button>
+          <button
+            type="button"
+            className="btn-secondary text-xs sm:text-sm"
+            onClick={() => void handleExportPdf()}
+            disabled={exporting || project.items.length === 0}
+          >
+            {exporting ? "Exporting…" : "Export PDF for Procurement"}
           </button>
           <button
             type="button"
