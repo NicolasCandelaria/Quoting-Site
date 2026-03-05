@@ -142,7 +142,6 @@ export async function exportProjectPdf(project: Project) {
   const margin = 40;
   const footerZoneHeight = 90; // Reserved at bottom so legal text is never cut off
   const contentMinY = margin + footerZoneHeight; // Body content must stay above this
-  const imageBlockHeight = 130; // Fixed height so specs never overlap images
 
   const finePrint =
     "This quote sheet together with the ideas expressed therein are the Confidential and Proprietary work of Billboard Worldwide Promotions Ltd. (“Billboard”) and is delivered to the recipient for the sole and exclusive purpose of soliciting a PO, job, or contract for work from the recipient. Billboard is the sole and exclusive copyright owner of the images and/or ideas expressed in the Quote Sheet and the recipient will not copy or alter the same, including removing Billboard’s name or trademarks or adding the name or trademarks of the recipient or any third party and the recipient will not present it as the recipient’s own or original work without Billboard’s prior written consent.";
@@ -201,16 +200,20 @@ export async function exportProjectPdf(project: Project) {
       y -= 8;
     }
 
-    // Fixed-height image block so specs never overlap
+    // Image block: show all images in a grid; resize so they fit on one page
     const imageBlockTop = y;
     const embeddedImages = await embedItemImages(pdfDoc, item);
+    const maxImageBlockHeight = 220; // cap so specs/pricing/footer still fit
+    const gap = 6;
+    const n = embeddedImages.length;
+    const perRow = n <= 1 ? 1 : n <= 4 ? 2 : 3;
+
     if (embeddedImages.length > 0) {
-      const gap = 8;
-      const perRow = 2;
       const numRows = Math.ceil(embeddedImages.length / perRow);
-      const rowHeight = (imageBlockHeight - gap * (numRows - 1)) / numRows;
-      const thumbWidth = (pageWidth - margin * 2 - gap) / perRow - gap / perRow;
+      const rowHeight = (maxImageBlockHeight - gap * (numRows - 1)) / numRows;
+      const thumbWidth = (pageWidth - margin * 2 - gap * (perRow - 1)) / perRow;
       const thumbHeight = rowHeight;
+      const imageBlockHeightUsed = numRows * thumbHeight + gap * (numRows - 1);
 
       let imageY = imageBlockTop;
       let x = margin;
@@ -247,15 +250,17 @@ export async function exportProjectPdf(project: Project) {
         "For visual representation purposes only. May not be exactly as shown.",
         {
           x: margin,
-          y: imageBlockTop - imageBlockHeight - 6,
+          y: imageBlockTop - imageBlockHeightUsed - 6,
           size: 8,
           font,
           color: rgb(0.4, 0.4, 0.42),
           maxWidth: pageWidth - margin * 2,
         },
       );
+      y = imageBlockTop - imageBlockHeightUsed - 20;
+    } else {
+      y -= 20;
     }
-    y = imageBlockTop - imageBlockHeight - 20;
 
     // Specs
     const specs: [string, string][] = [];

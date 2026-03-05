@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import type { Project, Item } from "@/lib/models";
 import { getItemPreviewImage } from "@/lib/item-image";
 import { fetchProject } from "@/lib/api";
+import { exportProjectPdf } from "@/lib/export-pdf";
 
 export default function ClientProjectPage() {
   const params = useParams<{ projectId: string }>();
@@ -13,6 +14,7 @@ export default function ClientProjectPage() {
 
   const [project, setProject] = useState<Project | null>(null);
   const [copied, setCopied] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -50,6 +52,16 @@ export default function ClientProjectPage() {
     }
   };
 
+  const handleDownloadPdf = async () => {
+    if (!project || exporting) return;
+    try {
+      setExporting(true);
+      await exportProjectPdf(project);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-3">
@@ -58,6 +70,14 @@ export default function ClientProjectPage() {
           <div className="flex flex-wrap gap-2">
             <button type="button" className="btn-secondary text-xs sm:text-sm" onClick={handleCopyLink}>
               {copied ? "Copied" : "Copy Link"}
+            </button>
+            <button
+              type="button"
+              className="btn-secondary text-xs sm:text-sm"
+              onClick={() => void handleDownloadPdf()}
+              disabled={exporting || items.length === 0}
+            >
+              {exporting ? "Preparing…" : "Download PDF"}
             </button>
           </div>
         </div>

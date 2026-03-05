@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Project, Item, PriceTier } from "@/lib/models";
 import { fetchProject } from "@/lib/api";
 import { getItemPreviewImage } from "@/lib/item-image";
+import { exportProjectPdf } from "@/lib/export-pdf";
 
 export default function ClientItemPage() {
   const params = useParams<{ projectId: string; itemId: string }>();
@@ -14,6 +15,7 @@ export default function ClientItemPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [item, setItem] = useState<Item | null>(null);
   const [copied, setCopied] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   useEffect(() => {
@@ -71,6 +73,16 @@ export default function ClientItemPage() {
     }
   };
 
+  const handleDownloadPdf = async () => {
+    if (!project || exporting) return;
+    try {
+      setExporting(true);
+      await exportProjectPdf(project);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-3">
@@ -80,6 +92,14 @@ export default function ClientItemPage() {
             <button type="button" className="btn-secondary text-xs sm:text-sm" onClick={handleCopyLink}>
               {copied ? "Copied" : "Copy Link"}
             </button>
+            <button
+              type="button"
+              className="btn-secondary text-xs sm:text-sm"
+              onClick={() => void handleDownloadPdf()}
+              disabled={exporting || (project?.items.length ?? 0) === 0}
+            >
+              {exporting ? "Preparing…" : "Download PDF"}
+            </button>
           </div>
         </div>
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-950">{item.name}</h1>
@@ -88,58 +108,75 @@ export default function ClientItemPage() {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
         <section className="card space-y-3 overflow-hidden p-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           {itemImages.length > 0 ? (
-            <img
-              src={itemImages[normalizedImageIndex]}
-              alt={item.name}
-              className="h-72 w-full rounded-lg object-cover sm:h-80"
-            />
+            <div className="relative">
+              <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-zinc-100">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={itemImages[normalizedImageIndex]}
+                  alt={item.name}
+                  className="h-full w-full object-contain"
+                />
+                {itemImages.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-md transition hover:bg-white"
+                      onClick={() =>
+                        setActiveImageIndex((prev) =>
+                          prev <= 0 ? itemImages.length - 1 : prev - 1,
+                        )
+                      }
+                      aria-label="Previous image"
+                    >
+                      <svg className="h-5 w-5 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-md transition hover:bg-white"
+                      onClick={() =>
+                        setActiveImageIndex((prev) =>
+                          prev >= itemImages.length - 1 ? 0 : prev + 1,
+                        )
+                      }
+                      aria-label="Next image"
+                    >
+                      <svg className="h-5 w-5 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                    <span className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded bg-black/60 px-2 py-0.5 text-xs text-white">
+                      {normalizedImageIndex + 1} / {itemImages.length}
+                    </span>
+                  </>
+                )}
+              </div>
+              {itemImages.length > 1 && (
+                <div className="mt-2 flex flex-wrap justify-center gap-1.5">
+                  {itemImages.map((imageUrl, index) => (
+                    <button
+                      key={`${imageUrl}-${index}`}
+                      type="button"
+                      className={`overflow-hidden rounded border-2 transition ${
+                        index === normalizedImageIndex
+                          ? "border-brand-500 ring-1 ring-brand-200"
+                          : "border-zinc-200 hover:border-zinc-300"
+                      }`}
+                      onClick={() => setActiveImageIndex(index)}
+                      aria-label={`View image ${index + 1}`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={imageUrl} alt="" className="h-12 w-12 object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           ) : (
-            <div className="flex h-72 w-full items-center justify-center rounded-lg bg-zinc-100 text-sm text-zinc-500 sm:h-80">No image provided</div>
-          )}
-
-          {itemImages.length > 1 && (
-            <div className="space-y-2">
-              <div className="flex flex-wrap gap-2">
-                {itemImages.map((imageUrl, index) => (
-                  <button
-                    key={`${imageUrl}-${index}`}
-                    type="button"
-                    className={`overflow-hidden rounded border ${
-                      index === normalizedImageIndex ? "border-brand-500" : "border-zinc-200"
-                    }`}
-                    onClick={() => setActiveImageIndex(index)}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={imageUrl} alt={`Item image ${index + 1}`} className="h-14 w-14 object-cover" />
-                  </button>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="btn-secondary !px-3 !py-1 text-xs"
-                  onClick={() =>
-                    setActiveImageIndex((prev) =>
-                      prev <= 0 ? itemImages.length - 1 : prev - 1,
-                    )
-                  }
-                >
-                  Prev
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary !px-3 !py-1 text-xs"
-                  onClick={() =>
-                    setActiveImageIndex((prev) =>
-                      prev >= itemImages.length - 1 ? 0 : prev + 1,
-                    )
-                  }
-                >
-                  Next
-                </button>
-              </div>
+            <div className="flex aspect-[4/3] w-full items-center justify-center rounded-lg bg-zinc-100 text-sm text-zinc-500">
+              No image provided
             </div>
           )}
 
