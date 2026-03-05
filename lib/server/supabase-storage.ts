@@ -21,6 +21,17 @@ function getClient() {
   });
 }
 
+/** Create the item-images bucket if it doesn't exist (public for read-only URLs). */
+async function ensureBucketExists(): Promise<void> {
+  const supabase = getClient();
+  const { error } = await supabase.storage.createBucket(BUCKET, {
+    public: true,
+  });
+  if (error && !error.message?.toLowerCase().includes("already exists")) {
+    throw new Error(`Could not create storage bucket: ${error.message}`);
+  }
+}
+
 function dataUrlToBlob(dataUrl: string): { blob: Blob; ext: string } {
   const [header, base64] = dataUrl.split(",");
   if (!base64) throw new Error("Invalid data URL");
@@ -41,6 +52,7 @@ function dataUrlToBlob(dataUrl: string): { blob: Blob; ext: string } {
  * Path: item-images/{uuid}.{ext}
  */
 export async function uploadFile(file: Blob | File): Promise<string> {
+  await ensureBucketExists();
   const supabase = getClient();
   const ext =
     file instanceof File && file.name
@@ -71,6 +83,7 @@ export async function uploadItemImage(
   if (!dataUrl.startsWith("data:image/")) {
     throw new Error("Expected a data URL for an image.");
   }
+  await ensureBucketExists();
   const { blob, ext } = dataUrlToBlob(dataUrl);
   const supabase = getClient();
   const path = `${itemId}/${index}.${ext}`;
