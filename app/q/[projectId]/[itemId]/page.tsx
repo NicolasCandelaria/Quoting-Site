@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Project, Item, PriceTier } from "@/lib/models";
 import { fetchProject } from "@/lib/api";
 import { getItemPreviewImage } from "@/lib/item-image";
@@ -34,6 +34,38 @@ export default function ClientItemPage() {
     if (!item) return;
     setActiveImageIndex(item.previewImageIndex ?? 0);
   }, [item]);
+
+  const imageCount = useMemo(() => {
+    if (!item) return 0;
+    if (item.images.length > 0) return item.images.length;
+    return getItemPreviewImage(item) ? 1 : 0;
+  }, [item]);
+
+  const goPrev = useCallback(() => {
+    setActiveImageIndex((prev) =>
+      imageCount <= 1 ? 0 : prev <= 0 ? imageCount - 1 : prev - 1,
+    );
+  }, [imageCount]);
+  const goNext = useCallback(() => {
+    setActiveImageIndex((prev) =>
+      imageCount <= 1 ? 0 : prev >= imageCount - 1 ? 0 : prev + 1,
+    );
+  }, [imageCount]);
+
+  useEffect(() => {
+    if (imageCount <= 1) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        goPrev();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        goNext();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [imageCount, goPrev, goNext]);
 
   const sortedTiers: PriceTier[] = useMemo(() => {
     const tiers = item?.priceTiers ?? [];
@@ -121,12 +153,11 @@ export default function ClientItemPage() {
                   <>
                     <button
                       type="button"
-                      className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-md transition hover:bg-white"
-                      onClick={() =>
-                        setActiveImageIndex((prev) =>
-                          prev <= 0 ? itemImages.length - 1 : prev - 1,
-                        )
-                      }
+                      className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-md transition hover:bg-white"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        goPrev();
+                      }}
                       aria-label="Previous image"
                     >
                       <svg className="h-5 w-5 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -135,26 +166,25 @@ export default function ClientItemPage() {
                     </button>
                     <button
                       type="button"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-md transition hover:bg-white"
-                      onClick={() =>
-                        setActiveImageIndex((prev) =>
-                          prev >= itemImages.length - 1 ? 0 : prev + 1,
-                        )
-                      }
+                      className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-md transition hover:bg-white"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        goNext();
+                      }}
                       aria-label="Next image"
                     >
                       <svg className="h-5 w-5 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                       </svg>
                     </button>
-                    <span className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded bg-black/60 px-2 py-0.5 text-xs text-white">
+                    <span className="absolute bottom-2 left-1/2 z-10 -translate-x-1/2 rounded bg-black/60 px-2 py-0.5 text-xs text-white">
                       {normalizedImageIndex + 1} / {itemImages.length}
                     </span>
                   </>
                 )}
               </div>
               {itemImages.length > 1 && (
-                <div className="mt-2 flex flex-wrap justify-center gap-1.5">
+                <div className="relative z-10 mt-2 flex flex-wrap justify-center gap-1.5">
                   {itemImages.map((imageUrl, index) => (
                     <button
                       key={`${imageUrl}-${index}`}

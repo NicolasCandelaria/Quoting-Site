@@ -83,14 +83,30 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
+function normalizeImageUrls(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((v): v is string => typeof v === "string" && v.length > 0);
+  }
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      return Array.isArray(parsed)
+        ? parsed.filter((v): v is string => typeof v === "string" && v.length > 0)
+        : value.length > 0
+          ? [value]
+          : [];
+    } catch {
+      return value.length > 0 ? [value] : [];
+    }
+  }
+  return [];
+}
+
 function toItem(row: SupabaseRowItem): Item {
   const fallbackImage = row.image_base64 ?? "";
+  const fromUrls = normalizeImageUrls(row.image_urls);
   const images =
-    Array.isArray(row.image_urls) && row.image_urls.length > 0
-      ? row.image_urls
-      : fallbackImage
-        ? [fallbackImage]
-        : [];
+    fromUrls.length > 0 ? fromUrls : fallbackImage ? [fallbackImage] : [];
 
   const previewImageIndex =
     typeof row.preview_image_index === "number" && row.preview_image_index >= 0
@@ -351,12 +367,11 @@ export async function upsertItemInSupabase(
     itemWithStorageUrls,
   );
 
-  // Legacy has no image_urls; full and gallery do. Try gallery/full first, then legacy.
-  const payloadCandidates = [
-    fullPayload,
-    galleryPayload,
-    legacyPayload,
-  ];
+  // When we have multiple images, only use payloads that store image_urls so we don't lose any.
+  const payloadCandidates =
+    imageUrls.length <= 1
+      ? [fullPayload, galleryPayload, legacyPayload]
+      : [fullPayload, galleryPayload];
 
   let lastError: unknown;
 
