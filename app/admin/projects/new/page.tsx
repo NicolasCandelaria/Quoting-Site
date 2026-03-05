@@ -62,7 +62,7 @@ export default function NewProjectPage() {
           />
         </div>
         <div>
-          <label className="label">Notes (internal)</label>
+          <label className="label">Brief Description</label>
           <textarea
             className="input min-h-[96px]"
             value={notes}
