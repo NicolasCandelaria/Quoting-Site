@@ -367,11 +367,8 @@ export async function upsertItemInSupabase(
     itemWithStorageUrls,
   );
 
-  // When we have multiple images, only use payloads that store image_urls so we don't lose any.
-  const payloadCandidates =
-    imageUrls.length <= 1
-      ? [fullPayload, galleryPayload, legacyPayload]
-      : [fullPayload, galleryPayload];
+  // Try full/gallery first (need image_urls column). If DB has no image_urls (PGRST204), fall back to legacy (saves only preview in image_base64).
+  const payloadCandidates = [fullPayload, galleryPayload, legacyPayload];
 
   let lastError: unknown;
 
