@@ -77,6 +77,61 @@ function formatPriceTiers(tiers: PriceTier[]): PriceTier[] {
   });
 }
 
+function wrapText(
+  text: string,
+  font: any,
+  fontSize: number,
+  maxWidth: number,
+): string[] {
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    const next = current ? `${current} ${word}` : word;
+    const w = font.widthOfTextAtSize(next, fontSize);
+    if (w <= maxWidth) {
+      current = next;
+    } else {
+      if (current) lines.push(current);
+      current = word;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
+function drawFooterFinePrint(
+  page: any,
+  text: string,
+  opts: {
+    x: number;
+    maxWidth: number;
+    margin: number;
+    footerZoneHeight: number;
+    contentMinY: number;
+    font: any;
+    fontSize: number;
+    lineHeight: number;
+    color: any;
+  },
+) {
+  const lines = wrapText(text, opts.font, opts.fontSize, opts.maxWidth);
+  const totalHeight = lines.length * opts.lineHeight;
+  const topY = opts.contentMinY - 6;
+  lines.forEach((line, i) => {
+    const y = topY - (i + 1) * opts.lineHeight;
+    if (y >= opts.margin) {
+      page.drawText(line, {
+        x: opts.x,
+        y,
+        size: opts.fontSize,
+        font: opts.font,
+        color: opts.color,
+      });
+    }
+  });
+}
+
 export async function exportProjectPdf(project: Project) {
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -85,6 +140,9 @@ export async function exportProjectPdf(project: Project) {
   const pageWidth = 595.28; // A4 width in points
   const pageHeight = 841.89; // A4 height in points
   const margin = 40;
+  const footerZoneHeight = 90; // Reserved at bottom so legal text is never cut off
+  const contentMinY = margin + footerZoneHeight; // Body content must stay above this
+  const imageBlockHeight = 130; // Fixed height so specs never overlap images
 
   const finePrint =
     "This quote sheet together with the ideas expressed therein are the Confidential and Proprietary work of Billboard Worldwide Promotions Ltd. (“Billboard”) and is delivered to the recipient for the sole and exclusive purpose of soliciting a PO, job, or contract for work from the recipient. Billboard is the sole and exclusive copyright owner of the images and/or ideas expressed in the Quote Sheet and the recipient will not copy or alter the same, including removing Billboard’s name or trademarks or adding the name or trademarks of the recipient or any third party and the recipient will not present it as the recipient’s own or original work without Billboard’s prior written consent.";
@@ -143,26 +201,34 @@ export async function exportProjectPdf(project: Project) {
       y -= 8;
     }
 
-    // Images (2 per row)
+    // Fixed-height image block so specs never overlap
+    const imageBlockTop = y;
     const embeddedImages = await embedItemImages(pdfDoc, item);
     if (embeddedImages.length > 0) {
-      const thumbWidth = 120;
-      const thumbHeight = 90;
-      const gap = 10;
+      const gap = 8;
       const perRow = 2;
+      const numRows = Math.ceil(embeddedImages.length / perRow);
+      const rowHeight = (imageBlockHeight - gap * (numRows - 1)) / numRows;
+      const thumbWidth = (pageWidth - margin * 2 - gap) / perRow - gap / perRow;
+      const thumbHeight = rowHeight;
 
-      let imageY = y;
+      let imageY = imageBlockTop;
       let x = margin;
       let col = 0;
 
       for (const img of embeddedImages) {
-        const scale = Math.min(thumbWidth / img.width, thumbHeight / img.height);
+        const scale = Math.min(
+          thumbWidth / img.width,
+          thumbHeight / img.height,
+          1,
+        );
         const w = img.width * scale;
         const h = img.height * scale;
+        const yOffset = (thumbHeight - h) / 2;
 
         page.drawImage(img.ref, {
           x,
-          y: imageY - h,
+          y: imageY - thumbHeight + yOffset,
           width: w,
           height: h,
         });
@@ -171,27 +237,25 @@ export async function exportProjectPdf(project: Project) {
         if (col >= perRow) {
           col = 0;
           x = margin;
-          imageY -= thumbHeight + gap;
+          imageY -= rowHeight + gap;
         } else {
           x += thumbWidth + gap;
         }
       }
 
-      y = imageY - 20;
-
       page.drawText(
         "For visual representation purposes only. May not be exactly as shown.",
         {
           x: margin,
-          y,
+          y: imageBlockTop - imageBlockHeight - 6,
           size: 8,
           font,
           color: rgb(0.4, 0.4, 0.42),
           maxWidth: pageWidth - margin * 2,
         },
       );
-      y -= 24;
     }
+    y = imageBlockTop - imageBlockHeight - 20;
 
     // Specs
     const specs: [string, string][] = [];
@@ -348,6 +412,7 @@ export async function exportProjectPdf(project: Project) {
       y = headerY - 12;
 
       for (const tier of tiers) {
+        if (y < contentMinY + 10) break;
         page.drawText(tier.qty.toLocaleString(), {
           x: colQty,
           y,
@@ -374,24 +439,29 @@ export async function exportProjectPdf(project: Project) {
 
       y -= 8;
 
-      page.drawText(priceNote, {
-        x: margin,
-        y,
-        size: 8,
-        font,
-        color: rgb(0.4, 0.4, 0.42),
-        maxWidth: pageWidth - margin * 2,
-      });
+      if (y >= contentMinY + 18) {
+        page.drawText(priceNote, {
+          x: margin,
+          y,
+          size: 8,
+          font,
+          color: rgb(0.4, 0.4, 0.42),
+          maxWidth: pageWidth - margin * 2,
+        });
+      }
     }
 
-    // Footer fine print
-    page.drawText(finePrint, {
+    // Footer fine print in reserved zone so it is never cut off
+    drawFooterFinePrint(page, finePrint, {
       x: margin,
-      y: margin + 20,
-      size: 7,
-      font,
-      color: rgb(0.5, 0.5, 0.52),
       maxWidth: pageWidth - margin * 2,
+      margin,
+      footerZoneHeight,
+      contentMinY,
+      font,
+      fontSize: 6,
+      lineHeight: 6.5,
+      color: rgb(0.5, 0.5, 0.52),
     });
   }
 
