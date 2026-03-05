@@ -188,7 +188,7 @@ export default function ProjectDetailPage() {
             <input name="client" className="input" defaultValue={project.client} required />
           </div>
           <div>
-            <label className="label">Notes (internal)</label>
+            <label className="label">Brief Description</label>
             <textarea name="notes" className="input min-h-[96px]" defaultValue={project.notes ?? ""} />
           </div>
           <div className="pt-2">
