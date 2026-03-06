@@ -2,37 +2,118 @@
 @tailwind components;
 @tailwind utilities;
 
-html,
-body {
-  height: 100%;
+@layer base {
+  html,
+  body {
+    height: 100%;
+  }
+  body {
+    color: #0f172a;
+  }
+  body h1,
+  body h2,
+  body h3,
+  body p,
+  body span,
+  body label {
+    color: inherit;
+  }
+  body a {
+    color: #0f172a;
+  }
+  body a:hover {
+    color: #1e40af;
+  }
 }
 
 body {
-  @apply bg-zinc-50 text-zinc-950 antialiased;
+  @apply bg-base antialiased;
+  color: #0f172a;
+  background-image: radial-gradient(
+    circle at top left,
+    #E2E8F0,
+    #F1F5F9
+  );
+  background-attachment: fixed;
 }
 
+/* Glass panel base (light theme) */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* Glass card (primary container) */
 .card {
-  @apply rounded-xl bg-white shadow-card border border-zinc-200;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
 }
 
 .btn-primary {
-  @apply inline-flex items-center justify-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:opacity-60;
+  @apply inline-flex items-center justify-center h-10 px-5 rounded-button text-body font-semibold text-white transition-all duration-glass ease-glass disabled:opacity-60;
+  background: #3B82F6;
+}
+.btn-primary:hover:not(:disabled) {
+  background: #2563EB;
+}
+.btn-primary:active:not(:disabled) {
+  background: #1D4ED8;
+}
+.btn-primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
 }
 
 .btn-secondary {
-  @apply inline-flex items-center justify-center rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-900 shadow-sm transition hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2;
+  @apply inline-flex items-center justify-center h-10 px-5 rounded-button text-body font-semibold text-text-primary transition-all duration-glass ease-glass;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.btn-secondary:hover {
+  background: rgba(248, 250, 252, 1);
+  border-color: rgba(0, 0, 0, 0.18);
+}
+.btn-secondary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
 }
 
 .btn-danger {
-  @apply inline-flex items-center justify-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2;
+  @apply inline-flex items-center justify-center h-10 px-5 rounded-button text-body font-semibold text-white transition-all duration-glass ease-glass disabled:opacity-60;
+  background: #EF4444;
+}
+.btn-danger:hover:not(:disabled) {
+  background: #DC2626;
+}
+.btn-danger:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25);
 }
 
 .input {
-  @apply block w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm transition placeholder:text-zinc-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-200;
+  @apply block w-full h-10 px-3 rounded-button text-body text-text-primary transition-all duration-glass ease-glass placeholder:text-text-tertiary;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+.input:focus {
+  outline: none;
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
 }
 
 .label {
-  @apply block text-sm font-medium text-zinc-900 mb-1;
+  @apply block text-body text-text-secondary mb-1;
 }
 
 .page-shell {

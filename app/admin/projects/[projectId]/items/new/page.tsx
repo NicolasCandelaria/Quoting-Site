@@ -47,22 +47,22 @@ export default function NewItemPage() {
   };
 
   if (!project) {
-    return <p className="text-sm text-slate-600">Loading project…</p>;
+    return <p className="text-body text-text-secondary">Loading project…</p>;
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+        <h1 className="text-page-title font-semibold text-text-primary">
           New Item
         </h1>
-        <p className="text-sm text-slate-600">
-          Project: <span className="font-medium text-slate-900">{project.name}</span>
+        <p className="text-body text-text-secondary">
+          Project: <span className="font-medium text-text-primary">{project.name}</span>
         </p>
       </header>
 
       {saveError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-panel border border-status-error/50 bg-status-error/10 px-4 py-3 text-body text-status-error">
           {saveError}
         </div>
       )}

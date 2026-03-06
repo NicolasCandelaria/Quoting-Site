@@ -33,11 +33,11 @@ export function ConfirmDialog({
       aria-labelledby="confirm-dialog-title"
       aria-describedby="confirm-dialog-desc"
     >
-      <div className="card max-w-md p-5 shadow-xl">
-        <h2 id="confirm-dialog-title" className="text-lg font-semibold text-zinc-950">
+      <div className="card max-w-md">
+        <h2 id="confirm-dialog-title" className="text-section-title font-semibold text-text-primary">
           {title}
         </h2>
-        <p id="confirm-dialog-desc" className="mt-2 text-sm text-zinc-600">
+        <p id="confirm-dialog-desc" className="mt-2 text-body text-text-secondary">
           {message}
         </p>
         <div className="mt-6 flex flex-wrap gap-2 justify-end">

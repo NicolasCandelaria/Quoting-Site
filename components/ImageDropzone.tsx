@@ -85,9 +85,14 @@ export function ImageDropzone({ images, previewIndex, onChange }: Props) {
   return (
     <div className="flex flex-col gap-3">
       <div
-        className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-6 text-center text-xs sm:text-sm transition ${
-          isDragging ? "border-brand-500 bg-brand-50" : "border-slate-300 bg-slate-50"
+        className={`flex cursor-pointer flex-col items-center justify-center rounded-panel border border-dashed px-8 py-8 text-center text-body transition-all duration-glass ease-glass ${
+          isDragging
+            ? "border-accent"
+            : "border-slate-300 bg-slate-50 hover:bg-slate-100"
         }`}
+        style={
+          isDragging ? { background: "rgba(59,130,246,0.1)" } : undefined
+        }
         onDragOver={(e) => {
           e.preventDefault();
           setIsDragging(true);
@@ -103,9 +108,9 @@ export function ImageDropzone({ images, previewIndex, onChange }: Props) {
         }}
         onClick={() => inputRef.current?.click()}
       >
-        <p className="font-medium text-slate-800">Drag &amp; drop product images</p>
-        <p className="mt-1 text-slate-500">or click to browse</p>
-        <p className="mt-2 text-[11px] text-slate-400">JPG, PNG or GIF. Uploaded to cloud storage.</p>
+        <p className="font-medium text-text-primary">Drag &amp; drop product images</p>
+        <p className="mt-1 text-text-secondary">or click to browse</p>
+        <p className="mt-2 text-caption text-text-tertiary">JPG, PNG or GIF. Uploaded to cloud storage.</p>
       </div>
 
       <input
@@ -119,14 +124,14 @@ export function ImageDropzone({ images, previewIndex, onChange }: Props) {
         }}
       />
 
-      {uploading && <p className="text-xs text-slate-500">Uploading image(s)…</p>}
+      {uploading && <p className="text-caption text-text-secondary">Uploading image(s)…</p>}
 
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-caption text-status-error">{error}</p>}
 
       {images.length > 0 && (
         <div className="mt-1 space-y-2">
-          <p className="mb-1 text-xs font-medium text-slate-700">Preview</p>
-          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+          <p className="mb-1 text-caption font-medium text-text-secondary">Preview</p>
+          <div className="overflow-hidden rounded-image-container border border-slate-200 bg-slate-50">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={images[normalizedPreviewIndex] ?? images[0]}
@@ -140,17 +145,19 @@ export function ImageDropzone({ images, previewIndex, onChange }: Props) {
               <div key={`${url}-${index}`} className="group relative">
                 <button
                   type="button"
-                  className={`overflow-hidden rounded border ${
-                    index === normalizedPreviewIndex ? "border-brand-500" : "border-slate-200"
+                  className={`overflow-hidden rounded-button border-2 transition-colors ${
+                    index === normalizedPreviewIndex
+                      ? "border-accent"
+                      : "border-slate-300 hover:border-slate-400"
                   }`}
                   onClick={() => onChange(images, index)}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt={`Thumbnail ${index + 1}`} className="h-14 w-14 object-cover" />
+                  <img src={url} alt="" className="h-14 w-14 object-cover" />
                 </button>
                 <button
                   type="button"
-                  className="absolute -right-1 -top-1 rounded-full bg-white px-1 text-[10px] text-red-600 shadow"
+                  className="absolute -right-1 -top-1 rounded-full bg-white border border-slate-200 px-1.5 py-0.5 text-[10px] text-status-error shadow"
                   onClick={() => removeImage(index)}
                   aria-label={`Remove image ${index + 1}`}
                 >
