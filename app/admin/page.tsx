@@ -42,13 +42,13 @@ export default function AdminHomePage() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+          <h1 className="text-page-title font-semibold text-text-primary">
             Projects
           </h1>
-          <p className="mt-1 max-w-xl text-sm text-slate-600">
+          <p className="mt-1 max-w-xl text-body text-text-secondary">
             Create quote sheet projects for each client engagement, then add
             items with pricing tiers.
           </p>
@@ -61,28 +61,28 @@ export default function AdminHomePage() {
       </header>
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-panel border border-status-error/50 bg-status-error/10 px-4 py-3 text-body text-status-error">
           {error}
         </div>
       )}
 
       {loading ? (
-        <div className="card p-6 text-sm text-slate-600">Loading projects…</div>
+        <div className="card text-body text-text-secondary">Loading projects…</div>
       ) : projects.length === 0 ? (
-        <div className="card p-6 text-sm text-slate-600">
-          <p className="font-medium text-slate-800">No projects yet.</p>
-          <p className="mt-1">
+        <div className="card">
+          <p className="font-medium text-text-primary">No projects yet.</p>
+          <p className="mt-1 text-body text-text-secondary">
             Use{" "}
-            <span className="font-semibold text-slate-900">Create New Project</span>{" "}
+            <span className="font-semibold text-text-primary">Create New Project</span>{" "}
             to get started.
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2">
           {projects.map((project) => (
             <div
               key={project.id}
-              className="card flex flex-col gap-3 p-4 transition hover:border-brand-100 hover:shadow-lg"
+              className="card flex flex-col gap-3 transition-all duration-glass ease-glass hover:-translate-y-0.5 hover:shadow-glass-card-hover"
             >
               <Link
                 href={`/admin/projects/${project.id}`}
@@ -90,30 +90,30 @@ export default function AdminHomePage() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-sm font-semibold text-slate-900">
+                    <h2 className="text-subsection-title font-semibold text-text-primary">
                       {project.name}
                     </h2>
-                    <p className="mt-0.5 text-xs text-slate-500">
+                    <p className="mt-0.5 text-caption text-text-secondary">
                       Client:{" "}
-                      <span className="font-medium text-slate-800">
+                      <span className="font-medium text-text-primary">
                         {project.client}
                       </span>
                     </p>
                   </div>
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                  <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-caption font-medium text-slate-700">
                     {project.items.length} item{project.items.length === 1 ? "" : "s"}
                   </span>
                 </div>
                 {project.notes && (
-                  <p className="line-clamp-3 whitespace-pre-line text-xs text-slate-600">
+                  <p className="line-clamp-3 whitespace-pre-line text-caption text-text-secondary">
                     {project.notes}
                   </p>
                 )}
               </Link>
-              <div className="flex justify-end border-t border-slate-100 pt-2 mt-1">
+              <div className="flex justify-end border-t border-slate-200 pt-2 mt-1">
                 <button
                   type="button"
-                  className="text-xs font-medium text-red-600 hover:text-red-700"
+                  className="text-caption font-medium text-status-error hover:underline"
                   onClick={(e) => {
                     e.preventDefault();
                     setProjectToDelete(project);

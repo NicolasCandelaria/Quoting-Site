@@ -1,10 +1,13 @@
 import type { ReactNode } from "react";
+import { AdminSidebar } from "@/components/AdminSidebar";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen flex flex-col bg-zinc-50">
-      <main className="page-main !py-6 md:!py-8">{children}</main>
+    <div className="flex min-h-screen">
+      <AdminSidebar />
+      <main className="min-h-screen flex-1 pl-[276px] pr-8 pt-8 pb-8 max-w-[1280px]">
+        {children}
+      </main>
     </div>
   );
 }
-

@@ -125,42 +125,42 @@ export default function ProjectDetailPage() {
   };
 
   if (loading) {
-    return <p className="text-sm text-slate-600">Loading project details...</p>;
+    return <p className="text-body text-text-secondary">Loading project details...</p>;
   }
 
   if (error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+      <div className="rounded-panel border border-status-error/50 bg-status-error/10 px-4 py-3 text-body text-status-error">
         {error}
       </div>
     );
   }
 
   if (!project) {
-    return <p className="text-sm text-slate-600">Project not found.</p>;
+    return <p className="text-body text-text-secondary">Project not found.</p>;
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-950">
+          <h1 className="text-page-title font-semibold text-text-primary">
             {project.name}
           </h1>
-          <p className="text-sm text-zinc-600">
-            Client: <span className="font-medium text-zinc-950">{project.client}</span>
+          <p className="text-body text-text-secondary">
+            Client: <span className="font-medium text-text-primary">{project.client}</span>
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href={`/q/${project.id}`} className="btn-secondary text-xs sm:text-sm">
+          <Link href={`/q/${project.id}`} className="btn-secondary">
             View Client Link
           </Link>
-          <button type="button" className="btn-secondary text-xs sm:text-sm" onClick={handleCopyLink}>
+          <button type="button" className="btn-secondary" onClick={handleCopyLink}>
             {copied ? "Copied" : "Copy Client Link"}
           </button>
           <button
             type="button"
-            className="btn-secondary text-xs sm:text-sm"
+            className="btn-secondary"
             onClick={() => void handleExportPdf()}
             disabled={exporting || project.items.length === 0}
           >
@@ -176,8 +176,8 @@ export default function ProjectDetailPage() {
         </div>
       </header>
 
-      <section className="card max-w-xl p-5">
-        <h2 className="text-base font-semibold text-zinc-950">Project Details</h2>
+      <section className="card max-w-xl">
+        <h2 className="text-subsection-title font-semibold text-text-primary">Project Details</h2>
         <form onSubmit={handleUpdate} className="mt-4 space-y-4">
           <div>
             <label className="label">Project Name</label>
@@ -193,52 +193,52 @@ export default function ProjectDetailPage() {
           </div>
           <div className="pt-2">
             <button type="submit" className="btn-primary">Save Changes</button>
-            {savedNotice && <p className="mt-2 text-xs font-medium text-brand-700">{savedNotice}</p>}
+            {savedNotice && <p className="mt-2 text-caption font-medium text-active-text">{savedNotice}</p>}
           </div>
         </form>
       </section>
 
-      <section className="card space-y-4 p-5">
+      <section className="card space-y-4">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-base font-semibold text-slate-900">Items</h2>
-          <span className="text-xs text-slate-500">
+          <h2 className="text-subsection-title font-semibold text-text-primary">Items</h2>
+          <span className="text-caption text-text-secondary">
             {project.items.length} item{project.items.length === 1 ? "" : "s"}
           </span>
         </div>
 
         {project.items.length === 0 ? (
-          <p className="text-sm text-slate-600">
-            No items yet. Use <span className="font-semibold text-slate-900">Add Item</span> to start building this quote sheet.
+          <p className="text-body text-text-secondary">
+            No items yet. Use <span className="font-semibold text-text-primary">Add Item</span> to start building this quote sheet.
           </p>
         ) : (
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2">
             {project.items.map((item) => (
-              <div key={item.id} className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              <div key={item.id} className="card group flex flex-col overflow-hidden transition-all duration-glass ease-glass hover:-translate-y-0.5 hover:shadow-glass-card-hover">
                 <button
                   type="button"
                   onClick={() => router.push(`/admin/projects/${project.id}/items/${item.id}`)}
                   className="flex flex-1 flex-col text-left"
                 >
-                  <div className="relative h-32 w-full overflow-hidden bg-slate-100">
+                  <div className="relative h-32 w-full overflow-hidden rounded-t-panel bg-slate-100">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     {getItemPreviewImage(item) ? (
                       <img src={getItemPreviewImage(item)} alt={item.name} className="h-full w-full object-cover transition group-hover:scale-[1.02]" />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center text-[11px] text-slate-400">No image</div>
+                      <div className="flex h-full w-full items-center justify-center text-caption text-text-tertiary">No image</div>
                     )}
                   </div>
                   <div className="flex flex-1 flex-col gap-1 p-3">
-                    <p className="line-clamp-2 text-xs font-semibold text-slate-900">{item.name}</p>
-                    <p className="line-clamp-2 text-[11px] text-slate-600">{item.shortDescription}</p>
+                    <p className="line-clamp-2 text-subsection-title font-semibold text-text-primary">{item.name}</p>
+                    <p className="line-clamp-2 text-caption text-text-secondary">{item.shortDescription}</p>
                   </div>
                 </button>
-                <div className="flex items-center justify-between gap-2 border-t border-slate-100 px-3 py-2">
-                  <button type="button" className="text-[11px] text-slate-500 hover:text-red-500" onClick={() => setItemToDelete(item)}>
+                <div className="flex items-center justify-between gap-2 border-t border-slate-200 px-3 py-2">
+                  <button type="button" className="text-caption text-text-secondary hover:text-status-error" onClick={() => setItemToDelete(item)}>
                     Remove item
                   </button>
                   <button
                     type="button"
-                    className="text-[11px] font-medium text-brand-600 hover:text-brand-700"
+                    className="text-caption font-medium text-accent hover:text-accent-hover"
                     onClick={() => router.push(`/admin/projects/${project.id}/items/${item.id}`)}
                   >
                     Edit
@@ -250,14 +250,14 @@ export default function ProjectDetailPage() {
         )}
       </section>
 
-      <section className="card max-w-xl p-5 border-red-200">
-        <h2 className="text-base font-semibold text-zinc-950">Danger zone</h2>
-        <p className="mt-1 text-sm text-zinc-600">
+      <section className="card max-w-xl border-status-error/30">
+        <h2 className="text-subsection-title font-semibold text-text-primary">Danger zone</h2>
+        <p className="mt-1 text-body text-text-secondary">
           Removing this project will delete all items and cannot be undone.
         </p>
         <button
           type="button"
-          className="mt-3 text-sm font-medium text-red-600 hover:text-red-700"
+          className="mt-3 text-body font-medium text-status-error hover:underline"
           onClick={() => setConfirmDeleteProject(true)}
         >
           Remove project

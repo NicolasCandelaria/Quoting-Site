@@ -32,17 +32,17 @@ export default function NewProjectPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+        <h1 className="text-page-title font-semibold text-text-primary">
           New Project
         </h1>
-        <p className="text-sm text-slate-600">
+        <p className="text-body text-text-secondary">
           Capture basic project details for this quote sheet.
         </p>
       </header>
 
-      <form onSubmit={handleSubmit} className="card max-w-xl space-y-4 p-6">
+      <form onSubmit={handleSubmit} className="card max-w-xl space-y-4">
         <div>
           <label className="label">Project Name</label>
           <input
@@ -71,7 +71,7 @@ export default function NewProjectPage() {
         </div>
 
         {error && (
-          <p className="text-sm text-red-700">{error}</p>
+          <p className="text-body text-status-error">{error}</p>
         )}
 
         <div className="pt-2">

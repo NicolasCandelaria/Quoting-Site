@@ -29,11 +29,11 @@ export default function ClientProjectPage() {
   }, [projectId]);
 
   if (loading) {
-    return <p className="text-sm text-zinc-600">Loading quote sheet...</p>;
+    return <p className="text-body text-text-secondary">Loading quote sheet...</p>;
   }
 
   if (!project) {
-    return <p className="text-sm text-zinc-600">Quote sheet not found.</p>;
+    return <p className="text-body text-text-secondary">Quote sheet not found.</p>;
   }
 
   const items = project.items;
@@ -63,17 +63,17 @@ export default function ClientProjectPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Quote Sheet</p>
+          <p className="text-caption uppercase tracking-[0.2em] text-text-tertiary">Quote Sheet</p>
           <div className="flex flex-wrap gap-2">
-            <button type="button" className="btn-secondary text-xs sm:text-sm" onClick={handleCopyLink}>
+            <button type="button" className="btn-secondary" onClick={handleCopyLink}>
               {copied ? "Copied" : "Copy Link"}
             </button>
             <button
               type="button"
-              className="btn-secondary text-xs sm:text-sm"
+              className="btn-secondary"
               onClick={() => void handleDownloadPdf()}
               disabled={exporting || items.length === 0}
             >
@@ -81,53 +81,57 @@ export default function ClientProjectPage() {
             </button>
           </div>
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-950">{project.name}</h1>
-        <p className="text-sm text-zinc-600">
-          Prepared for <span className="font-medium text-zinc-950">{project.client}</span>
+        <h1 className="text-page-title font-semibold text-text-primary">{project.name}</h1>
+        <p className="text-body text-text-secondary">
+          Prepared for <span className="font-medium text-text-primary">{project.client}</span>
         </p>
         {project.notes && (
-          <p className="whitespace-pre-line text-sm text-zinc-600">{project.notes}</p>
+          <p className="whitespace-pre-line text-body text-text-secondary">{project.notes}</p>
         )}
       </header>
 
       {items.length === 0 ? (
-        <div className="card p-6 text-sm text-zinc-600">No items have been added to this quote yet.</div>
+        <div className="card text-body text-text-secondary">No items have been added to this quote yet.</div>
       ) : (
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <section className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           {items.map((item: Item) => (
             <Link
               key={item.id}
               href={`/q/${project.id}/${item.id}`}
-              className="group flex flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-card transition hover:shadow-lg"
+              className="card group flex flex-col overflow-hidden transition-all duration-glass ease-glass hover:-translate-y-0.5 hover:shadow-glass-card-hover"
             >
-              <div className="relative h-40 w-full overflow-hidden bg-zinc-100">
+              <div className="relative h-[220px] w-full overflow-hidden rounded-image-container bg-slate-100">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 {getItemPreviewImage(item) ? (
-                  <img src={getItemPreviewImage(item)} alt={item.name} className="h-full w-full object-cover transition group-hover:scale-[1.02]" />
+                  <img
+                    src={getItemPreviewImage(item)}
+                    alt={item.name}
+                    className="h-full w-full object-cover transition group-hover:scale-[1.02]"
+                  />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center text-xs text-zinc-500">No image</div>
+                  <div className="flex h-full w-full items-center justify-center text-caption text-text-tertiary">No image</div>
                 )}
               </div>
               <div className="flex flex-1 flex-col gap-2 p-4">
-                <p className="line-clamp-2 text-sm font-semibold text-zinc-950">{item.name}</p>
-                <p className="line-clamp-3 text-xs text-zinc-600">{item.shortDescription}</p>
+                <p className="line-clamp-2 text-subsection-title font-semibold text-text-primary">{item.name}</p>
+                <p className="line-clamp-3 text-body text-text-secondary">{item.shortDescription}</p>
               </div>
             </Link>
           ))}
         </section>
       )}
 
-      <p className="mt-6 text-[10px] leading-snug text-zinc-500">
+      <p className="mt-6 text-caption leading-snug text-text-tertiary">
         This quote sheet together with the ideas expressed therein are the
         Confidential and Proprietary work of Billboard Worldwide Promotions Ltd.
-        (“Billboard”) and is delivered to the recipient for the sole and
+        (&quot;Billboard&quot;) and is delivered to the recipient for the sole and
         exclusive purpose of soliciting a PO, job, or contract for work from the
         recipient. Billboard is the sole and exclusive copyright owner of the
         images and/or ideas expressed in the Quote Sheet and the recipient will
-        not copy or alter the same, including removing Billboard’s name or
+        not copy or alter the same, including removing Billboard&apos;s name or
         trademarks or adding the name or trademarks of the recipient or any
-        third party and the recipient will not present it as the recipient’s own
-        or original work without Billboard’s prior written consent.
+        third party and the recipient will not present it as the recipient&apos;s own
+        or original work without Billboard&apos;s prior written consent.
       </p>
     </div>
   );

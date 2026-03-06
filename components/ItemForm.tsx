@@ -81,8 +81,8 @@ export function ItemForm({ initial, onSubmit, onCancel }: ItemFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-      <section className="card p-5 space-y-4">
-        <h2 className="text-base font-semibold text-slate-900">Core Details</h2>
+      <section className="card space-y-4">
+        <h2 className="text-subsection-title font-semibold text-text-primary">Core Details</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className="label">Name</label>
@@ -136,8 +136,8 @@ export function ItemForm({ initial, onSubmit, onCancel }: ItemFormProps) {
         </div>
       </section>
 
-      <section className="card p-5 space-y-4">
-        <h2 className="text-base font-semibold text-slate-900">Product Images</h2>
+      <section className="card space-y-4">
+        <h2 className="text-subsection-title font-semibold text-text-primary">Product Images</h2>
         <ImageDropzone
           images={item.images}
           previewIndex={item.previewImageIndex}
@@ -147,21 +147,22 @@ export function ItemForm({ initial, onSubmit, onCancel }: ItemFormProps) {
         />
       </section>
 
-      <section className="card p-5 space-y-4">
+      <section className="card space-y-4">
         <div className="flex items-center justify-between gap-4">
-          <h2 className="text-base font-semibold text-slate-900">Pricing Tiers</h2>
-          <button type="button" className="btn-secondary !px-3 !py-1.5 text-xs" onClick={addTier}>
+          <h2 className="text-subsection-title font-semibold text-text-primary">Pricing Tiers</h2>
+          <button type="button" className="btn-secondary !px-3 !py-1.5 text-caption" onClick={addTier}>
             Add Tier
           </button>
         </div>
         {item.priceTiers.length === 0 ? (
-          <p className="text-xs text-slate-500">No pricing tiers yet. Add at least one tier for client pricing.</p>
+          <p className="text-caption text-text-secondary">No pricing tiers yet. Add at least one tier for client pricing.</p>
         ) : (
           <div className="space-y-3">
             {item.priceTiers.map((tier, index) => (
               <div
                 key={index}
-                className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:grid-cols-[1fr_1fr_1.2fr_auto]"
+                className="grid gap-3 rounded-panel border border-slate-200 p-3 sm:grid-cols-[1fr_1fr_1.2fr_auto]"
+                style={{ background: "rgba(241,245,249,0.6)" }}
               >
                 <div>
                   <label className="label text-xs">Qty</label>
@@ -207,7 +208,7 @@ export function ItemForm({ initial, onSubmit, onCancel }: ItemFormProps) {
                 <div className="flex items-end justify-end">
                   <button
                     type="button"
-                    className="text-xs text-slate-500 hover:text-red-500"
+                    className="text-caption text-text-secondary hover:text-status-error"
                     onClick={() => removeTier(index)}
                   >
                     Remove
