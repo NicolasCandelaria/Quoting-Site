@@ -34,6 +34,8 @@ export async function POST(request: Request) {
     name?: string;
     client?: string;
     notes?: string;
+    pricingBasis?: string;
+    contactName?: string;
   };
 
   if (!payload.name?.trim() || !payload.client?.trim()) {
@@ -44,10 +46,14 @@ export async function POST(request: Request) {
   }
 
   try {
+    const pricingBasis =
+      payload.pricingBasis === "FOB" ? "FOB" : "DDP";
     const project = await createProjectInSupabase({
       name: payload.name.trim(),
       client: payload.client.trim(),
       notes: payload.notes?.trim() || undefined,
+      pricingBasis,
+      contactName: payload.contactName?.trim() || undefined,
     });
     return NextResponse.json({ project }, { status: 201 });
   } catch (error) {

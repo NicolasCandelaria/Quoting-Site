@@ -33,6 +33,8 @@ export async function createProject(input: {
   name: string;
   client: string;
   notes?: string;
+  pricingBasis?: "DDP" | "FOB";
+  contactName?: string;
 }): Promise<Project> {
   const response = await fetch("/api/projects", {
     method: "POST",

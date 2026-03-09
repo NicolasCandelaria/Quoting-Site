@@ -75,6 +75,9 @@ export default function ClientItemPage() {
     });
   }, [item]);
 
+  const pricingBasisLabel =
+    project?.pricingBasis === "FOB" ? "FOB" : "DDP";
+
   if (!project || !item) {
     return <p className="text-body text-text-secondary">Loading item details...</p>;
   }
@@ -245,7 +248,9 @@ export default function ClientItemPage() {
 
       <section className="card space-y-4">
         <div className="flex items-center justify-between gap-4">
-          <h2 className="text-section-title font-semibold text-text-primary">Pricing (Delivered Duty Paid)</h2>
+          <h2 className="text-section-title font-semibold text-text-primary">
+            {pricingBasisLabel === "FOB" ? "Pricing (FOB)" : "Pricing (DDP)"}
+          </h2>
           <p className="text-caption text-text-secondary">Pricing subject to final quote and availability.</p>
         </div>
 
@@ -257,7 +262,9 @@ export default function ClientItemPage() {
               <thead>
                 <tr className="text-spec-label font-semibold text-text-secondary bg-slate-100">
                   <th className="px-3 py-3 text-center">Qty</th>
-                  <th className="px-3 py-3 text-right">Price / Unit (DDP)</th>
+                  <th className="px-3 py-3 text-right">
+                    Price / Unit ({pricingBasisLabel})
+                  </th>
                   <th className="px-3 py-3 text-left">Production + Transit Time</th>
                 </tr>
               </thead>
@@ -275,18 +282,7 @@ export default function ClientItemPage() {
         )}
       </section>
 
-      <p className="text-caption leading-snug text-text-tertiary">
-        This quote sheet together with the ideas expressed therein are the
-        Confidential and Proprietary work of Billboard Worldwide Promotions Ltd.
-        (“Billboard”) and is delivered to the recipient for the sole and
-        exclusive purpose of soliciting a PO, job, or contract for work from the
-        recipient. Billboard is the sole and exclusive copyright owner of the
-        images and/or ideas expressed in the Quote Sheet and the recipient will
-        not copy or alter the same, including removing Billboard’s name or
-        trademarks or adding the name or trademarks of the recipient or any
-        third party and the recipient will not present it as the recipient’s own
-        or original work without Billboard’s prior written consent.
-      </p>
+      {/* Legal copy is shown on the internal project page and final PDF, not on the client item view. */}
     </div>
   );
 }

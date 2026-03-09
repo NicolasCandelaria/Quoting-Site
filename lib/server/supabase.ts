@@ -11,6 +11,8 @@ type SupabaseRowProject = {
   client: string;
   notes: string | null;
   created_at: string;
+  pricing_basis?: string | null;
+  contact_name?: string | null;
 };
 
 type SupabaseRowItem = {
@@ -130,12 +132,19 @@ function toItem(row: SupabaseRowItem): Item {
 }
 
 function toProject(row: SupabaseRowProject, items: Item[]): Project {
+  const pricingBasis =
+    row.pricing_basis === "FOB" || row.pricing_basis === "DDP"
+      ? (row.pricing_basis as "FOB" | "DDP")
+      : "DDP";
+
   return {
     id: row.id,
     name: row.name,
     client: row.client,
     notes: row.notes ?? undefined,
     createdAt: row.created_at,
+    pricingBasis,
+    contactName: row.contact_name ?? undefined,
     items,
   };
 }
@@ -242,9 +251,31 @@ async function listItemsFromSupabase(projectId?: string) {
 }
 
 export async function listProjectsFromSupabase(): Promise<Project[]> {
-  const projectRows = await request<SupabaseRowProject[]>(
+  const queries = [
+    "/projects?select=id,name,client,notes,created_at,pricing_basis,contact_name&order=created_at.desc",
     "/projects?select=id,name,client,notes,created_at&order=created_at.desc",
-  );
+  ];
+
+  let projectRows: SupabaseRowProject[] | undefined;
+  let lastError: unknown;
+
+  for (const query of queries) {
+    try {
+      projectRows = await request<SupabaseRowProject[]>(query);
+      break;
+    } catch (error) {
+      if (!isMissingColumnError(error)) {
+        throw error;
+      }
+      lastError = error;
+    }
+  }
+
+  if (!projectRows) {
+    throw lastError instanceof Error
+      ? lastError
+      : new Error("Could not read projects.");
+  }
 
   if (projectRows.length === 0) return [];
 
@@ -261,9 +292,31 @@ export async function listProjectsFromSupabase(): Promise<Project[]> {
 export async function getProjectFromSupabase(
   projectId: string,
 ): Promise<Project | undefined> {
-  const projects = await request<SupabaseRowProject[]>(
+  const queries = [
+    `/projects?select=id,name,client,notes,created_at,pricing_basis,contact_name&id=eq.${projectId}&limit=1`,
     `/projects?select=id,name,client,notes,created_at&id=eq.${projectId}&limit=1`,
-  );
+  ];
+
+  let projects: SupabaseRowProject[] | undefined;
+  let lastError: unknown;
+
+  for (const query of queries) {
+    try {
+      projects = await request<SupabaseRowProject[]>(query);
+      break;
+    } catch (error) {
+      if (!isMissingColumnError(error)) {
+        throw error;
+      }
+      lastError = error;
+    }
+  }
+
+  if (!projects) {
+    throw lastError instanceof Error
+      ? lastError
+      : new Error("Could not read project.");
+  }
 
   const project = projects[0];
   if (!project) return undefined;
@@ -277,39 +330,121 @@ export async function createProjectInSupabase(input: {
   name: string;
   client: string;
   notes?: string;
+  pricingBasis?: "DDP" | "FOB";
+  contactName?: string;
 }): Promise<Project> {
-  const rows = await request<SupabaseRowProject[]>(
-    "/projects?select=id,name,client,notes,created_at",
+  const rowsCandidates: {
+    path: string;
+    body: unknown[];
+  }[] = [
     {
-      method: "POST",
-      headers: { Prefer: "return=representation" },
-      body: JSON.stringify([
+      path: "/projects?select=id,name,client,notes,created_at,pricing_basis,contact_name",
+      body: [
+        {
+          name: input.name,
+          client: input.client,
+          notes: input.notes ?? null,
+          pricing_basis: input.pricingBasis ?? "DDP",
+          contact_name: input.contactName ?? null,
+        },
+      ],
+    },
+    {
+      path: "/projects?select=id,name,client,notes,created_at",
+      body: [
         {
           name: input.name,
           client: input.client,
           notes: input.notes ?? null,
         },
-      ]),
+      ],
     },
-  );
+  ];
+
+  let rows: SupabaseRowProject[] | undefined;
+  let lastError: unknown;
+
+  for (const candidate of rowsCandidates) {
+    try {
+      rows = await request<SupabaseRowProject[]>(candidate.path, {
+        method: "POST",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify(candidate.body),
+      });
+      break;
+    } catch (error) {
+      if (!isMissingColumnError(error)) {
+        throw error;
+      }
+      lastError = error;
+    }
+  }
+
+  if (!rows) {
+    throw lastError instanceof Error
+      ? lastError
+      : new Error("Could not create project.");
+  }
 
   const row = rows[0];
   return toProject(row, []);
 }
 
 export async function saveProjectInSupabase(project: Project): Promise<Project> {
-  const rows = await request<SupabaseRowProject[]>(
-    "/projects?id=eq." + project.id + "&select=id,name,client,notes,created_at",
+  const rowsCandidates: {
+    path: string;
+    body: Record<string, unknown>;
+  }[] = [
     {
-      method: "PATCH",
-      headers: { Prefer: "return=representation" },
-      body: JSON.stringify({
+      path:
+        "/projects?id=eq." +
+        project.id +
+        "&select=id,name,client,notes,created_at,pricing_basis,contact_name",
+      body: {
         name: project.name,
         client: project.client,
         notes: project.notes ?? null,
-      }),
+        pricing_basis: project.pricingBasis ?? "DDP",
+        contact_name: project.contactName ?? null,
+      },
     },
-  );
+    {
+      path:
+        "/projects?id=eq." +
+        project.id +
+        "&select=id,name,client,notes,created_at",
+      body: {
+        name: project.name,
+        client: project.client,
+        notes: project.notes ?? null,
+      },
+    },
+  ];
+
+  let rows: SupabaseRowProject[] | undefined;
+  let lastError: unknown;
+
+  for (const candidate of rowsCandidates) {
+    try {
+      rows = await request<SupabaseRowProject[]>(candidate.path, {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify(candidate.body),
+      });
+      break;
+    } catch (error) {
+      if (!isMissingColumnError(error)) {
+        throw error;
+      }
+      lastError = error;
+    }
+  }
+
+  if (!rows) {
+    throw lastError instanceof Error
+      ? lastError
+      : new Error("Could not update project.");
+  }
 
   const row = rows[0];
   if (!row) {

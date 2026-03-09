@@ -47,6 +47,11 @@ function normalizeProject(project: LegacyProject): Project {
     client: project.client,
     notes: project.notes,
     createdAt: project.createdAt,
+    pricingBasis:
+      project.pricingBasis === "FOB" || project.pricingBasis === "DDP"
+        ? project.pricingBasis
+        : "DDP",
+    contactName: project.contactName,
     items: Array.isArray(project.items) ? project.items.map(normalizeItem) : [],
   };
 }
@@ -143,6 +148,8 @@ export function createProject(input: {
   name: string;
   client: string;
   notes?: string;
+  pricingBasis?: "DDP" | "FOB";
+  contactName?: string;
 }): Project {
   const now = new Date().toISOString();
   const project: Project = {
@@ -151,6 +158,11 @@ export function createProject(input: {
     client: input.client,
     notes: input.notes,
     createdAt: now,
+    pricingBasis:
+      input.pricingBasis === "FOB" || input.pricingBasis === "DDP"
+        ? input.pricingBasis
+        : "DDP",
+    contactName: input.contactName,
     items: [],
   };
   saveProject(project);

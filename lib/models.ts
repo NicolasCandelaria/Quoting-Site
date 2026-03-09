@@ -25,6 +25,15 @@ export type Project = {
   client: string;
   notes?: string;
   createdAt: string;
+  /**
+   * Basis for per-unit pricing displayed in tables and PDFs.
+   * "DDP" = Delivered Duty Paid (default), "FOB" = Free On Board.
+   */
+  pricingBasis: "DDP" | "FOB";
+  /**
+   * Billboard Worldwide primary contact name for this project.
+   */
+  contactName?: string;
   items: Item[];
 };
 
