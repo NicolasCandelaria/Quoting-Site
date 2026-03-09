@@ -7,7 +7,8 @@ create table if not exists public.projects (
   notes text,
   created_at timestamptz not null default now(),
   pricing_basis text not null default 'DDP',
-  contact_name text
+  contact_name text,
+  quote_date text
 );
 
 create table if not exists public.items (
@@ -52,3 +53,6 @@ set preview_image_index = 0
 where preview_image_index is null or preview_image_index < 0;
 
 create index if not exists idx_items_project_id on public.items(project_id);
+
+alter table public.projects
+  add column if not exists quote_date text;

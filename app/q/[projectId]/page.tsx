@@ -85,6 +85,17 @@ export default function ClientProjectPage() {
         <p className="text-body text-text-secondary">
           Prepared for <span className="font-medium text-text-primary">{project.client}</span>
         </p>
+        {project.quoteDate && project.quoteDate.trim() !== "" && (() => {
+          const d = new Date(project.quoteDate!);
+          const dateLabel = !Number.isNaN(d.getTime())
+            ? d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
+            : project.quoteDate;
+          return (
+            <p className="text-caption text-text-secondary">
+              Date: <span className="font-medium text-text-primary">{dateLabel}</span>
+            </p>
+          );
+        })()}
         {project.notes && (
           <p className="whitespace-pre-line text-body text-text-secondary">{project.notes}</p>
         )}

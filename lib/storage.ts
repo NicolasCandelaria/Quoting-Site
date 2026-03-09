@@ -52,6 +52,7 @@ function normalizeProject(project: LegacyProject): Project {
         ? project.pricingBasis
         : "DDP",
     contactName: project.contactName,
+    quoteDate: project.quoteDate,
     items: Array.isArray(project.items) ? project.items.map(normalizeItem) : [],
   };
 }
@@ -150,6 +151,7 @@ export function createProject(input: {
   notes?: string;
   pricingBasis?: "DDP" | "FOB";
   contactName?: string;
+  quoteDate?: string;
 }): Project {
   const now = new Date().toISOString();
   const project: Project = {
@@ -163,6 +165,7 @@ export function createProject(input: {
         ? input.pricingBasis
         : "DDP",
     contactName: input.contactName,
+    quoteDate: input.quoteDate,
     items: [],
   };
   saveProject(project);

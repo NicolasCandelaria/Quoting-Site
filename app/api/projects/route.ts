@@ -36,6 +36,7 @@ export async function POST(request: Request) {
     notes?: string;
     pricingBasis?: string;
     contactName?: string;
+    quoteDate?: string;
   };
 
   if (!payload.name?.trim() || !payload.client?.trim()) {
@@ -54,6 +55,7 @@ export async function POST(request: Request) {
       notes: payload.notes?.trim() || undefined,
       pricingBasis,
       contactName: payload.contactName?.trim() || undefined,
+      quoteDate: payload.quoteDate?.trim() || undefined,
     });
     return NextResponse.json({ project }, { status: 201 });
   } catch (error) {

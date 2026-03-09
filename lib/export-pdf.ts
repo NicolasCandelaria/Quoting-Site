@@ -100,6 +100,9 @@ function wrapText(
   return lines;
 }
 
+const ITEM_PAGE_LEGAL =
+  'This quote sheet together with the ideas expressed therein are the Confidential and Proprietary work of Billboard Worldwide Promotions Ltd. ("Billboard") and is delivered to the recipient for the sole and exclusive purpose of soliciting a PO, job, or contract for work from the recipient. Billboard is the sole and exclusive copyright owner of the images and/or ideas expressed in the Quote Sheet and the recipient will not copy or alter the same, including removing Billboard\'s name or trademarks or adding the name or trademarks of the recipient or any third party and the recipient will not present it as the recipient\'s own or original work without Billboard\'s prior written consent.';
+
 export async function exportProjectPdf(project: Project) {
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -108,7 +111,60 @@ export async function exportProjectPdf(project: Project) {
   const pageWidth = 595.28; // A4 width in points
   const pageHeight = 841.89; // A4 height in points
   const margin = 40;
-  const contentMinY = margin + 40; // Keep some breathing room at the bottom of each item page
+  const footerZoneHeight = 52;
+  const contentMinY = margin + footerZoneHeight;
+
+  // Logo: load from same-origin (browser only)
+  let logoImage: { ref: any; width: number; height: number } | null = null;
+  if (typeof window !== "undefined") {
+    const logoUrl = `${window.location.origin}/images/logo.png`;
+    const logoBytes = await getImageBytes(logoUrl);
+    if (logoBytes && logoBytes.length > 0) {
+      try {
+        const img = await pdfDoc.embedPng(logoBytes);
+        logoImage = { ref: img, width: img.width, height: img.height };
+      } catch {
+        try {
+          const img = await pdfDoc.embedJpg(logoBytes);
+          logoImage = { ref: img, width: img.width, height: img.height };
+        } catch {
+          // ignore
+        }
+      }
+    }
+  }
+  const logoDisplayHeight = 28;
+  const logoScale = logoImage ? logoDisplayHeight / logoImage.height : 0;
+  const logoDisplayWidth = logoImage ? logoImage.width * logoScale : 0;
+  const logoGap = 12;
+
+  function drawLogo(page: any) {
+    if (!logoImage) return;
+    page.drawImage(logoImage.ref, {
+      x: margin,
+      y: pageHeight - margin - logoDisplayHeight,
+      width: logoDisplayWidth,
+      height: logoDisplayHeight,
+    });
+  }
+
+  function drawFooterLegal(page: any) {
+    const lines = wrapText(ITEM_PAGE_LEGAL, font, 6, pageWidth - margin * 2);
+    const lineHeight = 6.5;
+    const topY = contentMinY - 4;
+    lines.forEach((line, i) => {
+      const y = topY - (i + 1) * lineHeight;
+      if (y >= margin) {
+        page.drawText(line, {
+          x: margin,
+          y,
+          size: 6,
+          font,
+          color: rgb(0.45, 0.45, 0.48),
+        });
+      }
+    });
+  }
 
   const legalParagraphs: string[] = [
     "Artwork: This quotation is contingent upon receiving the required artwork and a confirmed purchase order. Any logo changes and/or additional artwork modifications may impact the production timeline and incur additional costs. If the first pre-production sample deviates from the original purchase order, the timeline will be affected, and new dates will need to be confirmed. Additionally, creative and design services—including artwork/logo development, modifications, design creation, and dye-line adjustments—are subject to additional charges.",
@@ -124,19 +180,32 @@ export async function exportProjectPdf(project: Project) {
     const page = pdfDoc.addPage([pageWidth, pageHeight]);
     const { height } = page.getSize();
 
-    let y = height - margin;
+    drawLogo(page);
+
+    let y = height - margin - (logoImage ? logoDisplayHeight + logoGap : 0);
 
     // Header: project + client
     const title = project.name;
     const clientLine = `Client: ${project.client}`;
-    const createdLabel =
-      project.createdAt && !Number.isNaN(Date.parse(project.createdAt))
-        ? new Date(project.createdAt).toLocaleDateString(undefined, {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-          })
-        : null;
+    const dateLabel =
+      project.quoteDate && project.quoteDate.trim() !== ""
+        ? (() => {
+            const d = new Date(project.quoteDate!);
+            return !Number.isNaN(d.getTime())
+              ? d.toLocaleDateString(undefined, {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                })
+              : project.quoteDate;
+          })()
+        : project.createdAt && !Number.isNaN(Date.parse(project.createdAt))
+          ? new Date(project.createdAt).toLocaleDateString(undefined, {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            })
+          : null;
     const contactLine = project.contactName
       ? `Billboard Worldwide contact: ${project.contactName}`
       : null;
@@ -159,8 +228,8 @@ export async function exportProjectPdf(project: Project) {
     });
     y -= 12;
 
-    if (createdLabel) {
-      page.drawText(`Created: ${createdLabel}`, {
+    if (dateLabel) {
+      page.drawText(`Date: ${dateLabel}`, {
         x: margin,
         y,
         size: 10,
@@ -451,11 +520,14 @@ export async function exportProjectPdf(project: Project) {
 
       y -= 12;
     }
+
+    drawFooterLegal(page);
   }
 
   // Final legal page
   const legalPage = pdfDoc.addPage([pageWidth, pageHeight]);
-  let legalY = pageHeight - margin;
+  drawLogo(legalPage);
+  let legalY = pageHeight - margin - (logoImage ? logoDisplayHeight + logoGap : 0);
 
   legalPage.drawText("Artwork, Freight & Terms", {
     x: margin,

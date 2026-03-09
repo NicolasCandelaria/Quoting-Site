@@ -11,6 +11,7 @@ export default function NewProjectPage() {
   const [notes, setNotes] = useState("");
   const [contactName, setContactName] = useState("");
   const [pricingBasis, setPricingBasis] = useState<"DDP" | "FOB">("DDP");
+  const [quoteDate, setQuoteDate] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -26,6 +27,7 @@ export default function NewProjectPage() {
         notes: notes || undefined,
         contactName: contactName || undefined,
         pricingBasis,
+        quoteDate: quoteDate || undefined,
       });
       router.push(`/admin/projects/${project.id}`);
     } catch (err) {
@@ -63,6 +65,15 @@ export default function NewProjectPage() {
             value={client}
             onChange={(e) => setClient(e.target.value)}
             required
+          />
+        </div>
+        <div>
+          <label className="label">Quote date</label>
+          <input
+            type="date"
+            className="input"
+            value={quoteDate}
+            onChange={(e) => setQuoteDate(e.target.value)}
           />
         </div>
         <div>

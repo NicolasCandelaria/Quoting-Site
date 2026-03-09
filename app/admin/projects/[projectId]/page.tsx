@@ -53,6 +53,7 @@ export default function ProjectDetailPage() {
       notes: String(formData.get("notes") || "") || undefined,
       contactName: String(formData.get("contactName") || "") || undefined,
       pricingBasis: pricingBasisRaw === "FOB" ? "FOB" : "DDP",
+      quoteDate: String(formData.get("quoteDate") || "").trim() || undefined,
     };
 
     try {
@@ -154,6 +155,19 @@ export default function ProjectDetailPage() {
         day: "numeric",
       })
     : null;
+  const quoteDateLabel =
+    project.quoteDate && project.quoteDate.trim() !== ""
+      ? (() => {
+          const d = new Date(project.quoteDate!);
+          return !Number.isNaN(d.getTime())
+            ? d.toLocaleDateString(undefined, {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              })
+            : project.quoteDate;
+        })()
+      : null;
 
   return (
     <div className="flex flex-col gap-8">
@@ -165,14 +179,23 @@ export default function ProjectDetailPage() {
           <p className="text-body text-text-secondary">
             Client: <span className="font-medium text-text-primary">{project.client}</span>
           </p>
-          {createdLabel && (
+          {(quoteDateLabel || createdLabel || project.contactName) && (
             <p className="text-caption text-text-secondary">
-              Created:{" "}
-              <span className="font-medium text-text-primary">{createdLabel}</span>
+              {quoteDateLabel && (
+                <>
+                  Date: <span className="font-medium text-text-primary">{quoteDateLabel}</span>
+                </>
+              )}
+              {!quoteDateLabel && createdLabel && (
+                <>
+                  Created:{" "}
+                  <span className="font-medium text-text-primary">{createdLabel}</span>
+                </>
+              )}
               {project.contactName && (
                 <>
-                  {" "}
-                  · Billboard Worldwide contact:{" "}
+                  {quoteDateLabel || createdLabel ? " · " : ""}
+                  Billboard Worldwide contact:{" "}
                   <span className="font-medium text-text-primary">
                     {project.contactName}
                   </span>
@@ -216,6 +239,15 @@ export default function ProjectDetailPage() {
           <div>
             <label className="label">Client</label>
             <input name="client" className="input" defaultValue={project.client} required />
+          </div>
+          <div>
+            <label className="label">Quote date</label>
+            <input
+              type="date"
+              name="quoteDate"
+              className="input"
+              defaultValue={project.quoteDate ?? ""}
+            />
           </div>
           <div>
             <label className="label">Billboard Worldwide contact</label>

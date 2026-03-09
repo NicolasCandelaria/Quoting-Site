@@ -35,6 +35,7 @@ export async function createProject(input: {
   notes?: string;
   pricingBasis?: "DDP" | "FOB";
   contactName?: string;
+  quoteDate?: string;
 }): Promise<Project> {
   const response = await fetch("/api/projects", {
     method: "POST",

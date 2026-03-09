@@ -34,6 +34,11 @@ export type Project = {
    * Billboard Worldwide primary contact name for this project.
    */
   contactName?: string;
+  /**
+   * Quote/project date set by the account manager (e.g. YYYY-MM-DD).
+   * Shown in header, on client views, and in PDFs.
+   */
+  quoteDate?: string;
   items: Item[];
 };
 
