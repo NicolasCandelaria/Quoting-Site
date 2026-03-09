@@ -8,6 +8,7 @@ import { getItemPreviewImage } from "@/lib/item-image";
 import { exportProjectPdf } from "@/lib/export-pdf";
 import { fetchProject, removeItem, updateProject, deleteProject } from "@/lib/api";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { formatQuoteDate } from "@/lib/format-date";
 
 export default function ProjectDetailPage() {
   const params = useParams<{ projectId: string }>();
@@ -157,16 +158,7 @@ export default function ProjectDetailPage() {
     : null;
   const quoteDateLabel =
     project.quoteDate && project.quoteDate.trim() !== ""
-      ? (() => {
-          const d = new Date(project.quoteDate!);
-          return !Number.isNaN(d.getTime())
-            ? d.toLocaleDateString(undefined, {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
-              })
-            : project.quoteDate;
-        })()
+      ? formatQuoteDate(project.quoteDate)
       : null;
 
   return (
