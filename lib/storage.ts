@@ -148,6 +148,8 @@ export function createProject(input: {
   name: string;
   client: string;
   notes?: string;
+  pricingBasis?: "DDP" | "FOB";
+  contactName?: string;
 }): Project {
   const now = new Date().toISOString();
   const project: Project = {
@@ -156,6 +158,11 @@ export function createProject(input: {
     client: input.client,
     notes: input.notes,
     createdAt: now,
+    pricingBasis:
+      input.pricingBasis === "FOB" || input.pricingBasis === "DDP"
+        ? input.pricingBasis
+        : "DDP",
+    contactName: input.contactName,
     items: [],
   };
   saveProject(project);
