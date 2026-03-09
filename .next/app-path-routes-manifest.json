@@ -1,0 +1,16 @@
+{
+  "/api/projects/[projectId]/items/[itemId]/route": "/api/projects/[projectId]/items/[itemId]",
+  "/_not-found/page": "/_not-found",
+  "/api/projects/[projectId]/items/route": "/api/projects/[projectId]/items",
+  "/api/projects/[projectId]/route": "/api/projects/[projectId]",
+  "/api/uploads/route": "/api/uploads",
+  "/api/projects/route": "/api/projects",
+  "/(site)/page": "/",
+  "/admin/projects/[projectId]/items/[itemId]/page": "/admin/projects/[projectId]/items/[itemId]",
+  "/q/[projectId]/page": "/q/[projectId]",
+  "/admin/page": "/admin",
+  "/admin/projects/[projectId]/items/new/page": "/admin/projects/[projectId]/items/new",
+  "/q/[projectId]/[itemId]/page": "/q/[projectId]/[itemId]",
+  "/admin/projects/new/page": "/admin/projects/new",
+  "/admin/projects/[projectId]/page": "/admin/projects/[projectId]"
+}

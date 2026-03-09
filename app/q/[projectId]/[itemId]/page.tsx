@@ -137,6 +137,17 @@ export default function ClientItemPage() {
             </button>
           </div>
         </div>
+        {project.quoteDate && project.quoteDate.trim() !== "" && (() => {
+          const d = new Date(project.quoteDate!);
+          const dateLabel = !Number.isNaN(d.getTime())
+            ? d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
+            : project.quoteDate;
+          return (
+            <p className="text-caption text-text-secondary">
+              Date: <span className="font-medium text-text-primary">{dateLabel}</span>
+            </p>
+          );
+        })()}
         <h1 className="text-page-title font-semibold text-text-primary">{item.name}</h1>
         <p className="max-w-2xl text-body text-text-secondary">{item.shortDescription}</p>
       </header>
