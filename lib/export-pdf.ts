@@ -100,38 +100,6 @@ function wrapText(
   return lines;
 }
 
-function drawFooterFinePrint(
-  page: any,
-  text: string,
-  opts: {
-    x: number;
-    maxWidth: number;
-    margin: number;
-    footerZoneHeight: number;
-    contentMinY: number;
-    font: any;
-    fontSize: number;
-    lineHeight: number;
-    color: any;
-  },
-) {
-  const lines = wrapText(text, opts.font, opts.fontSize, opts.maxWidth);
-  const totalHeight = lines.length * opts.lineHeight;
-  const topY = opts.contentMinY - 6;
-  lines.forEach((line, i) => {
-    const y = topY - (i + 1) * opts.lineHeight;
-    if (y >= opts.margin) {
-      page.drawText(line, {
-        x: opts.x,
-        y,
-        size: opts.fontSize,
-        font: opts.font,
-        color: opts.color,
-      });
-    }
-  });
-}
-
 export async function exportProjectPdf(project: Project) {
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -140,14 +108,17 @@ export async function exportProjectPdf(project: Project) {
   const pageWidth = 595.28; // A4 width in points
   const pageHeight = 841.89; // A4 height in points
   const margin = 40;
-  const footerZoneHeight = 90; // Reserved at bottom so legal text is never cut off
-  const contentMinY = margin + footerZoneHeight; // Body content must stay above this
+  const contentMinY = margin + 40; // Keep some breathing room at the bottom of each item page
 
-  const finePrint =
-    "This quote sheet together with the ideas expressed therein are the Confidential and Proprietary work of Billboard Worldwide Promotions Ltd. (“Billboard”) and is delivered to the recipient for the sole and exclusive purpose of soliciting a PO, job, or contract for work from the recipient. Billboard is the sole and exclusive copyright owner of the images and/or ideas expressed in the Quote Sheet and the recipient will not copy or alter the same, including removing Billboard’s name or trademarks or adding the name or trademarks of the recipient or any third party and the recipient will not present it as the recipient’s own or original work without Billboard’s prior written consent.";
+  const legalParagraphs: string[] = [
+    "Artwork: This quotation is contingent upon receiving the required artwork and a confirmed purchase order. Any logo changes and/or additional artwork modifications may impact the production timeline and incur additional costs. If the first pre-production sample deviates from the original purchase order, the timeline will be affected, and new dates will need to be confirmed. Additionally, creative and design services—including artwork/logo development, modifications, design creation, and dye-line adjustments—are subject to additional charges.",
+    "Custom pantone/color note: (substrate) Custom Pantone color will be matched as closely as possible to the pantone number provided; however, a 100% match cannot always be guaranteed due to substrate limitations.",
+    "Freight: Air freight quotes remain valid for 7 days from the date issued and are subject to change based on space availability. Freight charges and pricing are subject to fluctuations, such as fuel price adjustments. Prices do not include TAX/VAT. Due to the fluctuating freight cost all quotes for ocean and air transit will be updated at the time your goods are ready, and a sailing/booking is confirmed. Government implemented electricity cuts/shutdowns may occur at our overseas factories without notice and may cause production delays.",
+    "Please be advised that pricing may vary based on fluctuating tariff rates.",
+    "Timelines to be confirmed upon receipt of PO as CNY can affect timeline/production time. Pre-production samples must be developed and approved prior to the order date to ensure timely delivery. Quotations are valid for 15 days. Lead times will be confirmed upon receipt of sign-off.",
+  ];
 
-  const priceNote =
-    "Important note: Quotations are valid for 15 days. Lead times will be confirmed upon receipt of sign-off. Please be advised that pricing may vary based on fluctuating tariff rates.";
+  const pricingBasisLabel = project.pricingBasis === "FOB" ? "FOB" : "DDP";
 
   for (const item of project.items) {
     const page = pdfDoc.addPage([pageWidth, pageHeight]);
@@ -158,6 +129,17 @@ export async function exportProjectPdf(project: Project) {
     // Header: project + client
     const title = project.name;
     const clientLine = `Client: ${project.client}`;
+    const createdLabel =
+      project.createdAt && !Number.isNaN(Date.parse(project.createdAt))
+        ? new Date(project.createdAt).toLocaleDateString(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          })
+        : null;
+    const contactLine = project.contactName
+      ? `Billboard Worldwide contact: ${project.contactName}`
+      : null;
 
     page.drawText(title, {
       x: margin,
@@ -175,7 +157,29 @@ export async function exportProjectPdf(project: Project) {
       font,
       color: rgb(0.25, 0.25, 0.28),
     });
-    y -= 10;
+    y -= 12;
+
+    if (createdLabel) {
+      page.drawText(`Created: ${createdLabel}`, {
+        x: margin,
+        y,
+        size: 10,
+        font,
+        color: rgb(0.3, 0.3, 0.33),
+      });
+      y -= 12;
+    }
+
+    if (contactLine) {
+      page.drawText(contactLine, {
+        x: margin,
+        y,
+        size: 10,
+        font,
+        color: rgb(0.3, 0.3, 0.33),
+      });
+      y -= 14;
+    }
 
     page.drawText(item.name, {
       x: margin,
@@ -378,13 +382,16 @@ export async function exportProjectPdf(project: Project) {
     // Pricing
     const tiers = formatPriceTiers(item.priceTiers ?? []);
     if (tiers.length > 0) {
-      page.drawText("Pricing (Delivered Duty Paid)", {
-        x: margin,
-        y,
-        size: 11,
-        font: boldFont,
-        color: rgb(0.05, 0.05, 0.07),
-      });
+      page.drawText(
+        pricingBasisLabel === "FOB" ? "Pricing (FOB)" : "Pricing (DDP)",
+        {
+          x: margin,
+          y,
+          size: 11,
+          font: boldFont,
+          color: rgb(0.05, 0.05, 0.07),
+        },
+      );
       y -= 14;
 
       const headerY = y;
@@ -399,7 +406,7 @@ export async function exportProjectPdf(project: Project) {
         font: boldFont,
         color: rgb(0.3, 0.3, 0.32),
       });
-      page.drawText("Price / Unit (DDP)", {
+      page.drawText(`Price / Unit (${pricingBasisLabel})`, {
         x: colPrice,
         y: headerY,
         size: 9,
@@ -442,32 +449,40 @@ export async function exportProjectPdf(project: Project) {
         y -= 12;
       }
 
-      y -= 8;
-
-      if (y >= contentMinY + 18) {
-        page.drawText(priceNote, {
-          x: margin,
-          y,
-          size: 8,
-          font,
-          color: rgb(0.4, 0.4, 0.42),
-          maxWidth: pageWidth - margin * 2,
-        });
-      }
+      y -= 12;
     }
+  }
 
-    // Footer fine print in reserved zone so it is never cut off
-    drawFooterFinePrint(page, finePrint, {
-      x: margin,
-      maxWidth: pageWidth - margin * 2,
-      margin,
-      footerZoneHeight,
-      contentMinY,
-      font,
-      fontSize: 6,
-      lineHeight: 6.5,
-      color: rgb(0.5, 0.5, 0.52),
-    });
+  // Final legal page
+  const legalPage = pdfDoc.addPage([pageWidth, pageHeight]);
+  let legalY = pageHeight - margin;
+
+  legalPage.drawText("Artwork, Freight & Terms", {
+    x: margin,
+    y: legalY,
+    size: 14,
+    font: boldFont,
+    color: rgb(0.05, 0.05, 0.07),
+  });
+  legalY -= 22;
+
+  const maxLegalWidth = pageWidth - margin * 2;
+  const legalFontSize = 9;
+  const legalLineHeight = 12;
+
+  for (const paragraph of legalParagraphs) {
+    const lines = wrapText(paragraph, font, legalFontSize, maxLegalWidth);
+    for (const line of lines) {
+      legalPage.drawText(line, {
+        x: margin,
+        y: legalY,
+        size: legalFontSize,
+        font,
+        color: rgb(0.25, 0.25, 0.28),
+      });
+      legalY -= legalLineHeight;
+    }
+    legalY -= 8;
   }
 
 const pdfBytes = await pdfDoc.save();

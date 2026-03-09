@@ -5,7 +5,9 @@ create table if not exists public.projects (
   name text not null,
   client text not null,
   notes text,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  pricing_basis text not null default 'DDP',
+  contact_name text
 );
 
 create table if not exists public.items (

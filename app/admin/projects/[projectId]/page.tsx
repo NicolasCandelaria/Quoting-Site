@@ -45,11 +45,14 @@ export default function ProjectDetailPage() {
     if (!project) return;
 
     const formData = new FormData(e.currentTarget);
+    const pricingBasisRaw = String(formData.get("pricingBasis") || "DDP");
     const updated: Project = {
       ...project,
       name: String(formData.get("name") || ""),
       client: String(formData.get("client") || ""),
       notes: String(formData.get("notes") || "") || undefined,
+      contactName: String(formData.get("contactName") || "") || undefined,
+      pricingBasis: pricingBasisRaw === "FOB" ? "FOB" : "DDP",
     };
 
     try {
@@ -140,6 +143,18 @@ export default function ProjectDetailPage() {
     return <p className="text-body text-text-secondary">Project not found.</p>;
   }
 
+  const createdDate =
+    project.createdAt && !Number.isNaN(Date.parse(project.createdAt))
+      ? new Date(project.createdAt)
+      : null;
+  const createdLabel = createdDate
+    ? createdDate.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    : null;
+
   return (
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -150,6 +165,21 @@ export default function ProjectDetailPage() {
           <p className="text-body text-text-secondary">
             Client: <span className="font-medium text-text-primary">{project.client}</span>
           </p>
+          {createdLabel && (
+            <p className="text-caption text-text-secondary">
+              Created:{" "}
+              <span className="font-medium text-text-primary">{createdLabel}</span>
+              {project.contactName && (
+                <>
+                  {" "}
+                  · Billboard Worldwide contact:{" "}
+                  <span className="font-medium text-text-primary">
+                    {project.contactName}
+                  </span>
+                </>
+              )}
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <Link href={`/q/${project.id}`} className="btn-secondary">
@@ -186,6 +216,26 @@ export default function ProjectDetailPage() {
           <div>
             <label className="label">Client</label>
             <input name="client" className="input" defaultValue={project.client} required />
+          </div>
+          <div>
+            <label className="label">Billboard Worldwide contact</label>
+            <input
+              name="contactName"
+              className="input"
+              defaultValue={project.contactName ?? ""}
+              placeholder="Name of primary Billboard contact"
+            />
+          </div>
+          <div>
+            <label className="label">Pricing basis</label>
+            <select
+              name="pricingBasis"
+              className="input h-10"
+              defaultValue={project.pricingBasis ?? "DDP"}
+            >
+              <option value="DDP">Delivered Duty Paid (DDP)</option>
+              <option value="FOB">FOB</option>
+            </select>
           </div>
           <div>
             <label className="label">Notes (internal)</label>
@@ -262,6 +312,44 @@ export default function ProjectDetailPage() {
         >
           Remove project
         </button>
+      </section>
+
+      <section className="card max-w-3xl space-y-3">
+        <h2 className="text-subsection-title font-semibold text-text-primary">
+          Artwork, Freight &amp; Terms
+        </h2>
+        <p className="text-caption leading-relaxed text-text-secondary">
+          Artwork: This quotation is contingent upon receiving the required artwork and a confirmed
+          purchase order. Any logo changes and/or additional artwork modifications may impact the
+          production timeline and incur additional costs. If the first pre-production sample
+          deviates from the original purchase order, the timeline will be affected, and new dates
+          will need to be confirmed. Additionally, creative and design services—including
+          artwork/logo development, modifications, design creation, and dye-line adjustments—are
+          subject to additional charges.
+        </p>
+        <p className="text-caption leading-relaxed text-text-secondary">
+          Custom pantone/color note: (substrate) Custom Pantone color will be matched as closely as
+          possible to the pantone number provided; however, a 100% match cannot always be
+          guaranteed due to substrate limitations.
+        </p>
+        <p className="text-caption leading-relaxed text-text-secondary">
+          Freight: Air freight quotes remain valid for 7 days from the date issued and are subject
+          to change based on space availability. Freight charges and pricing are subject to
+          fluctuations, such as fuel price adjustments. Prices do not include TAX/VAT. Due to the
+          fluctuating freight cost all quotes for ocean and air transit will be updated at the time
+          your goods are ready, and a sailing/booking is confirmed. Government implemented
+          electricity cuts/shutdowns may occur at our overseas factories without notice and may
+          cause production delays.
+        </p>
+        <p className="text-caption leading-relaxed text-text-secondary">
+          Please be advised that pricing may vary based on fluctuating tariff rates.
+        </p>
+        <p className="text-caption leading-relaxed text-text-secondary">
+          Timelines to be confirmed upon receipt of PO as CNY can affect timeline/production time.
+          Pre-production samples must be developed and approved prior to the order date to ensure
+          timely delivery. Quotations are valid for 15 days. Lead times will be confirmed upon
+          receipt of sign-off.
+        </p>
       </section>
 
       <ConfirmDialog

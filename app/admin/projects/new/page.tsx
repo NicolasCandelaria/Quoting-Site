@@ -9,6 +9,8 @@ export default function NewProjectPage() {
   const [name, setName] = useState("");
   const [client, setClient] = useState("");
   const [notes, setNotes] = useState("");
+  const [contactName, setContactName] = useState("");
+  const [pricingBasis, setPricingBasis] = useState<"DDP" | "FOB">("DDP");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -22,6 +24,8 @@ export default function NewProjectPage() {
         name,
         client,
         notes: notes || undefined,
+        contactName: contactName || undefined,
+        pricingBasis,
       });
       router.push(`/admin/projects/${project.id}`);
     } catch (err) {
@@ -60,6 +64,28 @@ export default function NewProjectPage() {
             onChange={(e) => setClient(e.target.value)}
             required
           />
+        </div>
+        <div>
+          <label className="label">Billboard Worldwide contact</label>
+          <input
+            className="input"
+            value={contactName}
+            onChange={(e) => setContactName(e.target.value)}
+            placeholder="Name of primary Billboard contact"
+          />
+        </div>
+        <div>
+          <label className="label">Pricing basis</label>
+          <select
+            className="input h-10"
+            value={pricingBasis}
+            onChange={(e) =>
+              setPricingBasis(e.target.value === "FOB" ? "FOB" : "DDP")
+            }
+          >
+            <option value="DDP">Delivered Duty Paid (DDP)</option>
+            <option value="FOB">FOB</option>
+          </select>
         </div>
         <div>
           <label className="label">Notes (internal)</label>

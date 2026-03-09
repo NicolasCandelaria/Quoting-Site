@@ -47,6 +47,11 @@ function normalizeProject(project: LegacyProject): Project {
     client: project.client,
     notes: project.notes,
     createdAt: project.createdAt,
+    pricingBasis:
+      project.pricingBasis === "FOB" || project.pricingBasis === "DDP"
+        ? project.pricingBasis
+        : "DDP",
+    contactName: project.contactName,
     items: Array.isArray(project.items) ? project.items.map(normalizeItem) : [],
   };
 }
