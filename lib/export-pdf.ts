@@ -335,6 +335,9 @@ export async function exportProjectPdf(project: Project) {
     if (item.material) specs.push(["Material", item.material]);
     if (item.size) specs.push(["Size", item.size]);
     if (item.logo) specs.push(["Logo", item.logo]);
+    (item.customFields ?? [])
+      .filter((f) => f.name?.trim())
+      .forEach((f) => specs.push([f.name, f.value]));
 
     if (specs.length > 0) {
       page.drawText("Specifications", {

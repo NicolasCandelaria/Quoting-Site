@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Project, Item, PriceTier } from "@/lib/models";
@@ -235,6 +236,12 @@ export default function ClientItemPage() {
               {item.material && (<><dt className="text-spec-label text-text-secondary">Material</dt><dd className="text-spec-value font-medium text-text-primary">{item.material}</dd></>)}
               {item.size && (<><dt className="text-spec-label text-text-secondary">Size</dt><dd className="whitespace-pre-line text-spec-value font-medium text-text-primary">{item.size}</dd></>)}
               {item.logo && (<><dt className="text-spec-label text-text-secondary">Logo</dt><dd className="whitespace-pre-line text-spec-value font-medium text-text-primary">{item.logo}</dd></>)}
+              {(item.customFields ?? []).filter((f) => f.name?.trim()).map((field, i) => (
+                <React.Fragment key={i}>
+                  <dt className="text-spec-label text-text-secondary">{field.name}</dt>
+                  <dd className="whitespace-pre-line text-spec-value font-medium text-text-primary">{field.value}</dd>
+                </React.Fragment>
+              ))}
             </dl>
           </div>
 

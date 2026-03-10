@@ -4,6 +4,8 @@ export type PriceTier = {
   productionPlusTransitTime: string;
 };
 
+export type CustomField = { name: string; value: string };
+
 export type Item = {
   id: string;
   name: string;
@@ -16,6 +18,8 @@ export type Item = {
   preProductionSampleTime: string;
   preProductionSampleFee: string;
   packingDetails: string;
+  /** Custom name/value fields added by account managers. */
+  customFields: CustomField[];
   priceTiers: PriceTier[];
 };
 
