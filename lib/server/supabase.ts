@@ -242,9 +242,10 @@ async function listItemsFromSupabase(projectId?: string) {
 
   const queryCandidates = [
     `/items?select=id,project_id,name,short_description,image_urls,preview_image_index,image_base64,material,size,logo,pre_production_sample_time,pre_production_sample_fee,packing_details,base_color,additional_notes,price_tiers${projectFilter}`,
+    `/items?select=id,project_id,name,short_description,image_urls,preview_image_index,image_base64,material,size,logo,pre_production_sample_time,pre_production_sample_fee,packing_details,base_color,additional_notes,price_tiers${projectFilter}`,
+    `/items?select=id,project_id,name,short_description,image_urls,preview_image_index,material,size,logo,pre_production_sample_time,pre_production_sample_fee,packing_details,base_color,additional_notes,price_tiers${projectFilter}`,
+    `/items?select=id,project_id,name,short_description,image_base64,material,size,logo,pre_production_sample_time,pre_production_sample_fee,packing_details,base_color,additional_notes,price_tiers${projectFilter}`,
     `/items?select=id,project_id,name,short_description,image_urls,preview_image_index,image_base64,material,size,logo,pre_production_sample_time,pre_production_sample_fee,packing_details,price_tiers${projectFilter}`,
-    `/items?select=id,project_id,name,short_description,image_urls,preview_image_index,material,size,logo,pre_production_sample_time,pre_production_sample_fee,packing_details,price_tiers${projectFilter}`,
-    `/items?select=id,project_id,name,short_description,image_base64,material,size,logo,pre_production_sample_time,pre_production_sample_fee,packing_details,price_tiers${projectFilter}`,
   ];
 
   let lastError: unknown;
