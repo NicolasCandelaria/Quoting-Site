@@ -24,6 +24,13 @@ function normalizeItem(item: LegacyItem): Item {
       ? Math.min(item.previewImageIndex, Math.max(images.length - 1, 0))
       : 0;
 
+  const customFields = Array.isArray(item.customFields)
+    ? item.customFields.filter(
+        (f): f is { name: string; value: string } =>
+          f != null && typeof f.name === "string" && typeof f.value === "string",
+      )
+    : [];
+
   return {
     id: item.id ?? crypto.randomUUID(),
     name: item.name ?? "",
@@ -36,6 +43,7 @@ function normalizeItem(item: LegacyItem): Item {
     preProductionSampleTime: item.preProductionSampleTime ?? "",
     preProductionSampleFee: item.preProductionSampleFee ?? "",
     packingDetails: item.packingDetails ?? "",
+    customFields,
     priceTiers: Array.isArray(item.priceTiers) ? item.priceTiers : [],
   };
 }

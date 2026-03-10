@@ -21,6 +21,7 @@ const emptyItemBase: Omit<Item, "id"> = {
   preProductionSampleTime: "",
   preProductionSampleFee: "",
   packingDetails: "",
+  customFields: [],
   priceTiers: [],
 };
 
@@ -71,6 +72,32 @@ export function ItemForm({ initial, onSubmit, onCancel }: ItemFormProps) {
     setItem((prev) => ({
       ...prev,
       priceTiers: prev.priceTiers.filter((_, i) => i !== index),
+    }));
+  };
+
+  const addCustomField = () => {
+    setItem((prev) => ({
+      ...prev,
+      customFields: [...(prev.customFields ?? []), { name: "", value: "" }],
+    }));
+  };
+
+  const updateCustomField = (
+    index: number,
+    patch: { name?: string; value?: string },
+  ) => {
+    setItem((prev) => {
+      const fields = [...(prev.customFields ?? [])];
+      const current = fields[index] ?? { name: "", value: "" };
+      fields[index] = { ...current, ...patch };
+      return { ...prev, customFields: fields };
+    });
+  };
+
+  const removeCustomField = (index: number) => {
+    setItem((prev) => ({
+      ...prev,
+      customFields: (prev.customFields ?? []).filter((_, i) => i !== index),
     }));
   };
 
@@ -134,6 +161,56 @@ export function ItemForm({ initial, onSubmit, onCancel }: ItemFormProps) {
             />
           </div>
         </div>
+      </section>
+
+      <section className="card space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-subsection-title font-semibold text-text-primary">Custom fields</h2>
+          <button type="button" className="btn-secondary !px-3 !py-1.5 text-caption" onClick={addCustomField}>
+            Add new field
+          </button>
+        </div>
+        {(item.customFields ?? []).length === 0 ? (
+          <p className="text-caption text-text-secondary">No custom fields. Add field name and value (e.g. Base color / black).</p>
+        ) : (
+          <div className="space-y-3">
+            {(item.customFields ?? []).map((field, index) => (
+              <div
+                key={index}
+                className="grid gap-3 rounded-panel border border-slate-200 p-3 sm:grid-cols-[1fr_1fr_auto]"
+                style={{ background: "rgba(241,245,249,0.6)" }}
+              >
+                <div>
+                  <label className="label text-xs">Field name</label>
+                  <input
+                    className="input"
+                    value={field.name}
+                    onChange={(e) => updateCustomField(index, { name: e.target.value })}
+                    placeholder="e.g. Base color"
+                  />
+                </div>
+                <div>
+                  <label className="label text-xs">Value</label>
+                  <input
+                    className="input"
+                    value={field.value}
+                    onChange={(e) => updateCustomField(index, { value: e.target.value })}
+                    placeholder="e.g. black"
+                  />
+                </div>
+                <div className="flex items-end justify-end">
+                  <button
+                    type="button"
+                    className="text-caption text-text-secondary hover:text-status-error"
+                    onClick={() => removeCustomField(index)}
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="card space-y-4">
