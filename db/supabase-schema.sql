@@ -25,7 +25,8 @@ create table if not exists public.items (
   pre_production_sample_time text not null default '',
   pre_production_sample_fee text not null default '',
   packing_details text not null default '',
-  custom_fields jsonb not null default '[]'::jsonb,
+  base_color text default '',
+  additional_notes text default '',
   price_tiers jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -59,4 +60,7 @@ alter table public.projects
   add column if not exists quote_date text;
 
 alter table public.items
-  add column if not exists custom_fields jsonb not null default '[]'::jsonb;
+  add column if not exists base_color text default '';
+
+alter table public.items
+  add column if not exists additional_notes text default '';
