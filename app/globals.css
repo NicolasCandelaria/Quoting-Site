@@ -22,7 +22,7 @@
     color: #0f172a;
   }
   body a:hover {
-    color: #1e40af;
+    color: #24186e;
   }
 }
 
@@ -60,17 +60,17 @@ body {
 
 .btn-primary {
   @apply inline-flex items-center justify-center h-10 px-5 rounded-button text-body font-semibold text-white transition-all duration-glass ease-glass disabled:opacity-60;
-  background: #3B82F6;
+  background: #24186e;
 }
 .btn-primary:hover:not(:disabled) {
-  background: #2563EB;
+  background: #1e1359;
 }
 .btn-primary:active:not(:disabled) {
-  background: #1D4ED8;
+  background: #1a1052;
 }
 .btn-primary:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+  box-shadow: 0 0 0 2px rgba(36, 24, 110, 0.25);
 }
 
 .btn-secondary {
@@ -86,7 +86,7 @@ body {
 }
 .btn-secondary:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+  box-shadow: 0 0 0 2px rgba(36, 24, 110, 0.25);
 }
 
 .btn-danger {
@@ -108,8 +108,8 @@ body {
 }
 .input:focus {
   outline: none;
-  border-color: #3B82F6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+  border-color: #24186e;
+  box-shadow: 0 0 0 2px rgba(36, 24, 110, 0.25);
 }
 
 .label {

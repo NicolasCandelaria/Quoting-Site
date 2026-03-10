@@ -40,13 +40,20 @@ export function AdminSidebar() {
   return (
     <aside
       className="fixed left-0 top-0 z-40 h-screen w-[240px] shrink-0 border-r border-[#16124a] shadow-sm"
-      style={{
-        backgroundColor: "#1e195b",
-        backdropFilter: "blur(18px)",
-        WebkitBackdropFilter: "blur(18px)",
-      }}
+      style={{ backgroundColor: "#1e195b" }}
     >
-      <div className="flex h-full flex-col gap-4 pt-6">
+      <div
+        className="pointer-events-none absolute inset-0 z-0"
+        style={{
+          backgroundImage: "url(/images/sidebar%20background.png)",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          mixBlendMode: "soft-light",
+          opacity: 0.8,
+        }}
+        aria-hidden
+      />
+      <div className="relative z-10 flex h-full flex-col gap-4 pt-6">
         <div className="px-3">
           <Link href="/" className="inline-flex items-center gap-2" aria-label="Quote Sheet">
             {/* eslint-disable-next-line @next/next/no-img-element */}
