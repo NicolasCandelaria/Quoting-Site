@@ -129,14 +129,6 @@ export function ItemForm({ initial, onSubmit, onCancel }: ItemFormProps) {
               onChange={(e) => updateField("preProductionSampleFee", e.target.value)}
             />
           </div>
-          <div className="sm:col-span-2">
-            <label className="label">Packing Details</label>
-            <textarea
-              className="input min-h-[72px]"
-              value={item.packingDetails}
-              onChange={(e) => updateField("packingDetails", e.target.value)}
-            />
-          </div>
           <div>
             <label className="label">Base color</label>
             <input
@@ -144,6 +136,14 @@ export function ItemForm({ initial, onSubmit, onCancel }: ItemFormProps) {
               value={item.baseColor ?? ""}
               onChange={(e) => updateField("baseColor", e.target.value)}
               placeholder="e.g. black, white"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="label">Packing Details</label>
+            <textarea
+              className="input min-h-[72px]"
+              value={item.packingDetails}
+              onChange={(e) => updateField("packingDetails", e.target.value)}
             />
           </div>
           <div className="sm:col-span-2">
