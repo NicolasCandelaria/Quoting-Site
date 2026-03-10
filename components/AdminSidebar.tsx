@@ -39,8 +39,9 @@ export function AdminSidebar() {
 
   return (
     <aside
-      className="fixed left-0 top-0 z-40 h-screen w-[240px] shrink-0 border-r border-slate-200 bg-white/95 shadow-sm"
+      className="fixed left-0 top-0 z-40 h-screen w-[240px] shrink-0 border-r border-[#16124a] shadow-sm"
       style={{
+        backgroundColor: "#1e195b",
         backdropFilter: "blur(18px)",
         WebkitBackdropFilter: "blur(18px)",
       }}
@@ -58,36 +59,36 @@ export function AdminSidebar() {
             href="/"
             className={`flex h-10 items-center gap-2 rounded-lg px-3 text-body font-medium transition-colors ${
               pathname === "/"
-                ? "bg-active-bg text-active-text"
-                : "text-text-secondary hover:bg-slate-100 hover:text-text-primary"
+                ? "bg-white/20 text-white"
+                : "text-[#c8c4e8] hover:bg-white/10 hover:text-white"
             }`}
           >
-            <Home className="h-5 w-5 shrink-0 opacity-75" />
+            <Home className="h-5 w-5 shrink-0" />
             Home
           </Link>
           <Link
             href="/admin"
             className={`flex h-10 items-center gap-2 rounded-lg px-3 text-body font-medium transition-colors ${
               pathname.startsWith("/admin")
-                ? "bg-active-bg text-active-text"
-                : "text-text-secondary hover:bg-slate-100 hover:text-text-primary"
+                ? "bg-white/20 text-white"
+                : "text-[#c8c4e8] hover:bg-white/10 hover:text-white"
             }`}
           >
-            <LayoutDashboard className="h-5 w-5 shrink-0 opacity-75" />
+            <LayoutDashboard className="h-5 w-5 shrink-0" />
             Admin
           </Link>
         </nav>
 
         <div className="mt-2 flex flex-col gap-1 px-3">
-          <label className="text-caption font-medium text-text-tertiary">Projects</label>
+          <label className="text-caption font-medium text-[#a8a3d4]">Projects</label>
           <select
-            className="input h-9 w-full cursor-pointer text-caption"
+            className="input h-9 w-full cursor-pointer border-[#2d2869] bg-white/10 text-white text-caption placeholder:text-[#a8a3d4] focus:border-white/40 focus:ring-white/20"
             value={selected}
             onChange={(e) => handleJump(e.target.value)}
           >
             <option value="">{projects.length ? "Jump to project…" : "No projects"}</option>
             {projects.map((p) => (
-              <option key={p.id} value={p.id}>
+              <option key={p.id} value={p.id} className="bg-[#1e195b] text-white">
                 {p.name} — {p.client}
               </option>
             ))}
