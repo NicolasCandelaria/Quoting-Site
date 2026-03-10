@@ -1,4 +1,4 @@
-import type { Item, Project, CustomField } from "@/lib/models";
+import type { Item, Project } from "@/lib/models";
 import { uploadItemImages } from "./supabase-storage";
 
 type ItemCompat = Partial<Item> & {
@@ -30,7 +30,8 @@ type SupabaseRowItem = {
   pre_production_sample_time: string;
   pre_production_sample_fee: string;
   packing_details: string;
-  custom_fields?: unknown;
+  base_color?: string | null;
+  additional_notes?: string | null;
   price_tiers: Item["priceTiers"];
 };
 
@@ -106,16 +107,6 @@ function normalizeImageUrls(value: unknown): string[] {
   return [];
 }
 
-function normalizeCustomFields(value: unknown): CustomField[] {
-  if (!Array.isArray(value)) return [];
-  return value.filter((entry): entry is CustomField => {
-    if (entry == null || typeof entry !== "object") return false;
-    const name = (entry as { name?: unknown }).name;
-    const val = (entry as { value?: unknown }).value;
-    return typeof name === "string" && typeof val === "string";
-  });
-}
-
 function toItem(row: SupabaseRowItem): Item {
   const fallbackImage = row.image_base64 ?? "";
   const fromUrls = normalizeImageUrls(row.image_urls);
@@ -139,7 +130,8 @@ function toItem(row: SupabaseRowItem): Item {
     preProductionSampleTime: row.pre_production_sample_time,
     preProductionSampleFee: row.pre_production_sample_fee,
     packingDetails: row.packing_details,
-    customFields: normalizeCustomFields(row.custom_fields),
+    baseColor: row.base_color ?? undefined,
+    additionalNotes: row.additional_notes ?? undefined,
     priceTiers: Array.isArray(row.price_tiers) ? row.price_tiers : [],
   };
 }
@@ -196,7 +188,8 @@ function toItemInsertWithAllImageColumns(projectId: string, item: Item) {
     pre_production_sample_time: item.preProductionSampleTime,
     pre_production_sample_fee: item.preProductionSampleFee,
     packing_details: item.packingDetails,
-    custom_fields: item.customFields ?? [],
+    base_color: item.baseColor ?? null,
+    additional_notes: item.additionalNotes ?? null,
     price_tiers: item.priceTiers,
   };
 }
@@ -217,7 +210,8 @@ function toItemInsertWithGalleryColumns(projectId: string, item: Item) {
     pre_production_sample_time: item.preProductionSampleTime,
     pre_production_sample_fee: item.preProductionSampleFee,
     packing_details: item.packingDetails,
-    custom_fields: item.customFields ?? [],
+    base_color: item.baseColor ?? null,
+    additional_notes: item.additionalNotes ?? null,
     price_tiers: item.priceTiers,
   };
 }
@@ -237,6 +231,8 @@ function toItemInsertWithLegacyColumn(projectId: string, item: Item) {
     pre_production_sample_time: item.preProductionSampleTime,
     pre_production_sample_fee: item.preProductionSampleFee,
     packing_details: item.packingDetails,
+    base_color: item.baseColor ?? null,
+    additional_notes: item.additionalNotes ?? null,
     price_tiers: item.priceTiers,
   };
 }
@@ -245,7 +241,7 @@ async function listItemsFromSupabase(projectId?: string) {
   const projectFilter = projectId ? `&project_id=eq.${projectId}` : "";
 
   const queryCandidates = [
-    `/items?select=id,project_id,name,short_description,image_urls,preview_image_index,image_base64,material,size,logo,pre_production_sample_time,pre_production_sample_fee,packing_details,custom_fields,price_tiers${projectFilter}`,
+    `/items?select=id,project_id,name,short_description,image_urls,preview_image_index,image_base64,material,size,logo,pre_production_sample_time,pre_production_sample_fee,packing_details,base_color,additional_notes,price_tiers${projectFilter}`,
     `/items?select=id,project_id,name,short_description,image_urls,preview_image_index,image_base64,material,size,logo,pre_production_sample_time,pre_production_sample_fee,packing_details,price_tiers${projectFilter}`,
     `/items?select=id,project_id,name,short_description,image_urls,preview_image_index,material,size,logo,pre_production_sample_time,pre_production_sample_fee,packing_details,price_tiers${projectFilter}`,
     `/items?select=id,project_id,name,short_description,image_base64,material,size,logo,pre_production_sample_time,pre_production_sample_fee,packing_details,price_tiers${projectFilter}`,

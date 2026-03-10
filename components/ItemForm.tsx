@@ -21,7 +21,8 @@ const emptyItemBase: Omit<Item, "id"> = {
   preProductionSampleTime: "",
   preProductionSampleFee: "",
   packingDetails: "",
-  customFields: [],
+  baseColor: "",
+  additionalNotes: "",
   priceTiers: [],
 };
 
@@ -39,7 +40,9 @@ export function ItemForm({ initial, onSubmit, onCancel }: ItemFormProps) {
       | "logo"
       | "preProductionSampleTime"
       | "preProductionSampleFee"
-      | "packingDetails",
+      | "packingDetails"
+      | "baseColor"
+      | "additionalNotes",
     value: string,
   ) => {
     setItem((prev) => ({ ...prev, [field]: value }));
@@ -72,32 +75,6 @@ export function ItemForm({ initial, onSubmit, onCancel }: ItemFormProps) {
     setItem((prev) => ({
       ...prev,
       priceTiers: prev.priceTiers.filter((_, i) => i !== index),
-    }));
-  };
-
-  const addCustomField = () => {
-    setItem((prev) => ({
-      ...prev,
-      customFields: [...(prev.customFields ?? []), { name: "", value: "" }],
-    }));
-  };
-
-  const updateCustomField = (
-    index: number,
-    patch: { name?: string; value?: string },
-  ) => {
-    setItem((prev) => {
-      const fields = [...(prev.customFields ?? [])];
-      const current = fields[index] ?? { name: "", value: "" };
-      fields[index] = { ...current, ...patch };
-      return { ...prev, customFields: fields };
-    });
-  };
-
-  const removeCustomField = (index: number) => {
-    setItem((prev) => ({
-      ...prev,
-      customFields: (prev.customFields ?? []).filter((_, i) => i !== index),
     }));
   };
 
@@ -160,58 +137,24 @@ export function ItemForm({ initial, onSubmit, onCancel }: ItemFormProps) {
               onChange={(e) => updateField("packingDetails", e.target.value)}
             />
           </div>
-        </div>
-
-        <div className="mt-4 space-y-3">
-          <div className="flex items-center justify-between gap-4">
-            <h3 className="text-subsection-title font-semibold text-text-primary">Custom fields</h3>
-            <button type="button" className="btn-secondary !px-3 !py-1.5 text-caption" onClick={addCustomField}>
-              Add new field
-            </button>
+          <div>
+            <label className="label">Base color</label>
+            <input
+              className="input"
+              value={item.baseColor ?? ""}
+              onChange={(e) => updateField("baseColor", e.target.value)}
+              placeholder="e.g. black, white"
+            />
           </div>
-          {(item.customFields ?? []).length === 0 ? (
-            <p className="text-caption text-text-secondary">
-              No custom fields. Add field name and value (e.g. Base color / black).
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {(item.customFields ?? []).map((field, index) => (
-                <div
-                  key={index}
-                  className="grid gap-3 rounded-panel border border-slate-200 p-3 sm:grid-cols-[1fr_1fr_auto]"
-                  style={{ background: "rgba(241,245,249,0.6)" }}
-                >
-                  <div>
-                    <label className="label text-xs">Field name</label>
-                    <input
-                      className="input"
-                      value={field.name}
-                      onChange={(e) => updateCustomField(index, { name: e.target.value })}
-                      placeholder="e.g. Base color"
-                    />
-                  </div>
-                  <div>
-                    <label className="label text-xs">Value</label>
-                    <input
-                      className="input"
-                      value={field.value}
-                      onChange={(e) => updateCustomField(index, { value: e.target.value })}
-                      placeholder="e.g. black"
-                    />
-                  </div>
-                  <div className="flex items-end justify-end">
-                    <button
-                      type="button"
-                      className="text-caption text-text-secondary hover:text-status-error"
-                      onClick={() => removeCustomField(index)}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="sm:col-span-2">
+            <label className="label">Additional notes</label>
+            <textarea
+              className="input min-h-[72px]"
+              value={item.additionalNotes ?? ""}
+              onChange={(e) => updateField("additionalNotes", e.target.value)}
+              placeholder="Optional notes for this item"
+            />
+          </div>
         </div>
       </section>
 
