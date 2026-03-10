@@ -332,11 +332,11 @@ export async function exportProjectPdf(project: Project) {
 
     // Specs
     const specs: [string, string][] = [];
-    if (item.material) specs.push(["Material", item.material]);
-    if (item.size) specs.push(["Size", item.size]);
-    if (item.logo) specs.push(["Logo", item.logo]);
-    if (item.baseColor) specs.push(["Base color", item.baseColor]);
-    if (item.additionalNotes) specs.push(["Additional notes", item.additionalNotes]);
+    if ((item.material ?? "").trim()) specs.push(["Material", item.material.trim()]);
+    if ((item.size ?? "").trim()) specs.push(["Size", item.size.trim()]);
+    if ((item.logo ?? "").trim()) specs.push(["Logo", item.logo.trim()]);
+    if ((item.baseColor ?? "").trim()) specs.push(["Base color", (item.baseColor ?? "").trim()]);
+    if ((item.additionalNotes ?? "").trim()) specs.push(["Additional notes", (item.additionalNotes ?? "").trim()]);
 
     if (specs.length > 0) {
       page.drawText("Specifications", {
@@ -350,6 +350,7 @@ export async function exportProjectPdf(project: Project) {
 
       const labelColor = rgb(0.45, 0.45, 0.47);
       const valueColor = rgb(0.1, 0.1, 0.13);
+      const specValueWidth = pageWidth - margin * 2 - 80;
 
       for (const [label, value] of specs) {
         page.drawText(`${label}:`, {
@@ -359,15 +360,19 @@ export async function exportProjectPdf(project: Project) {
           font,
           color: labelColor,
         });
-        page.drawText(value, {
-          x: margin + 80,
-          y,
-          size: 9,
-          font,
-          color: valueColor,
-          maxWidth: pageWidth - margin * 2 - 80,
-        });
-        y -= 12;
+        const valueLines = wrapText(value, font, 9, specValueWidth);
+        for (const line of valueLines) {
+          page.drawText(line, {
+            x: margin + 80,
+            y,
+            size: 9,
+            font,
+            color: valueColor,
+            maxWidth: specValueWidth,
+          });
+          y -= 12;
+        }
+        if (valueLines.length === 0) y -= 12;
       }
 
       y -= 6;
