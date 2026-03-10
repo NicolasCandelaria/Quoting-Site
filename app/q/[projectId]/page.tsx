@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import type { Project, Item } from "@/lib/models";
 import { getItemPreviewImage } from "@/lib/item-image";
 import { fetchProject } from "@/lib/api";
+import { formatQuoteDate } from "@/lib/format-date";
 import { exportProjectPdf } from "@/lib/export-pdf";
 
 export default function ClientProjectPage() {
@@ -86,10 +87,7 @@ export default function ClientProjectPage() {
           Prepared for <span className="font-medium text-text-primary">{project.client}</span>
         </p>
         {project.quoteDate && project.quoteDate.trim() !== "" && (() => {
-          const d = new Date(project.quoteDate!);
-          const dateLabel = !Number.isNaN(d.getTime())
-            ? d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
-            : project.quoteDate;
+          const dateLabel = formatQuoteDate(project.quoteDate!);
           return (
             <p className="text-caption text-text-secondary">
               Date: <span className="font-medium text-text-primary">{dateLabel}</span>

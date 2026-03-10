@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import type { Project, Item, PriceTier } from "@/lib/models";
+import { formatQuoteDate } from "@/lib/format-date";
 
 function dataUrlToUint8Array(dataUrl: string): Uint8Array | null {
   const parts = dataUrl.split(",");
@@ -133,10 +134,10 @@ export async function exportProjectPdf(project: Project) {
       }
     }
   }
-  const logoDisplayHeight = 28;
+  const logoDisplayHeight = 40;
   const logoScale = logoImage ? logoDisplayHeight / logoImage.height : 0;
   const logoDisplayWidth = logoImage ? logoImage.width * logoScale : 0;
-  const logoGap = 12;
+  const logoGap = 22;
 
   function drawLogo(page: any) {
     if (!logoImage) return;
@@ -189,16 +190,7 @@ export async function exportProjectPdf(project: Project) {
     const clientLine = `Client: ${project.client}`;
     const dateLabel =
       project.quoteDate && project.quoteDate.trim() !== ""
-        ? (() => {
-            const d = new Date(project.quoteDate!);
-            return !Number.isNaN(d.getTime())
-              ? d.toLocaleDateString(undefined, {
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                })
-              : project.quoteDate;
-          })()
+        ? formatQuoteDate(project.quoteDate)
         : project.createdAt && !Number.isNaN(Date.parse(project.createdAt))
           ? new Date(project.createdAt).toLocaleDateString(undefined, {
               year: "numeric",
@@ -276,8 +268,10 @@ export async function exportProjectPdf(project: Project) {
     // Image block: show all images in a grid; resize so they fit on one page
     const imageBlockTop = y;
     const embeddedImages = await embedItemImages(pdfDoc, item);
-    const maxImageBlockHeight = 220; // cap so specs/pricing/footer still fit
+    const maxImageBlockHeight = 200; // cap so caption, specs, pricing, footer fit without overlap
     const gap = 6;
+    const captionGapAbove = 14; // space between image block and caption
+    const captionGapBelow = 20; // space between caption and next section
     const n = embeddedImages.length;
     const perRow = n <= 1 ? 1 : n <= 4 ? 2 : 3;
 
@@ -319,18 +313,19 @@ export async function exportProjectPdf(project: Project) {
         }
       }
 
+      const captionY = imageBlockTop - imageBlockHeightUsed - captionGapAbove;
       page.drawText(
         "For visual representation purposes only. May not be exactly as shown.",
         {
           x: margin,
-          y: imageBlockTop - imageBlockHeightUsed - 6,
+          y: captionY,
           size: 8,
           font,
           color: rgb(0.4, 0.4, 0.42),
           maxWidth: pageWidth - margin * 2,
         },
       );
-      y = imageBlockTop - imageBlockHeightUsed - 20;
+      y = captionY - 10 - captionGapBelow;
     } else {
       y -= 20;
     }
