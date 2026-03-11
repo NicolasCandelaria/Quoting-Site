@@ -145,9 +145,11 @@ export function CollageBuilderModal({
     try {
       const canvas = renderCollageToCanvas(validImages, layout, {
         lowCountSafeCover:
-          validImages.length === 2 || validImages.length === 3,
+          validImages.length === 2 ||
+          validImages.length === 3 ||
+          validImages.length === 4,
         fitMode:
-          validImages.length >= 2 && validImages.length <= 3
+          validImages.length >= 2 && validImages.length <= 4
             ? undefined
             : "contain",
       });

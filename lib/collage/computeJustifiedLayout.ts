@@ -51,7 +51,7 @@ export function computeJustifiedLayout(
   // Tighter row height and padding to reduce empty canvas space.
   if (images.length === 2) {
     const lowCountMinH = 90;
-    const lowCountMaxH = 180;
+    const lowCountMaxH = 160;
     const lowCountPadding = 16;
     const contentW = canvasWidth - 2 * lowCountPadding;
 
@@ -99,7 +99,7 @@ export function computeJustifiedLayout(
   // Tighter row heights and padding to reduce empty canvas space.
   if (images.length === 3) {
     const lowCountMinH = 90;
-    const lowCountMaxH = 180;
+    const lowCountMaxH = 160;
     const lowCountPadding = 16;
     const contentW = canvasWidth - 2 * lowCountPadding;
 
@@ -168,13 +168,19 @@ export function computeJustifiedLayout(
     };
   }
 
-  // Special-case 4 images: 2x2 grid.
+  // Special-case 4 images: 2x2 grid, compact and no-gap (same low-count treatment as 2 and 3).
   if (images.length === 4) {
-    const slotWidth =
-      (contentWidth - gap) / 2;
+    const lowCountMinH = 90;
+    const lowCountMaxH = 160;
+    const lowCountPadding = 16;
+    const contentW = canvasWidth - 2 * lowCountPadding;
 
-    const firstRowY = outerPadding;
-    const secondRowY = outerPadding + rowHeight + gap;
+    let rowHeight = contentW / 2;
+    rowHeight = Math.min(Math.max(rowHeight, lowCountMinH), lowCountMaxH);
+
+    const slotWidth = contentW / 2;
+    const firstRowY = lowCountPadding;
+    const secondRowY = lowCountPadding + rowHeight;
 
     const firstRow: LayoutRow = {
       height: rowHeight,
@@ -182,14 +188,14 @@ export function computeJustifiedLayout(
       images: [
         {
           id: images[0]?.id,
-          x: outerPadding,
+          x: lowCountPadding,
           y: firstRowY,
           width: slotWidth,
           height: rowHeight,
         },
         {
           id: images[1]?.id,
-          x: outerPadding + slotWidth + gap,
+          x: lowCountPadding + slotWidth,
           y: firstRowY,
           width: slotWidth,
           height: rowHeight,
@@ -199,18 +205,18 @@ export function computeJustifiedLayout(
 
     const secondRow: LayoutRow = {
       height: rowHeight,
-      yOffset: rowHeight + gap,
+      yOffset: rowHeight,
       images: [
         {
           id: images[2]?.id,
-          x: outerPadding,
+          x: lowCountPadding,
           y: secondRowY,
           width: slotWidth,
           height: rowHeight,
         },
         {
           id: images[3]?.id,
-          x: outerPadding + slotWidth + gap,
+          x: lowCountPadding + slotWidth,
           y: secondRowY,
           width: slotWidth,
           height: rowHeight,
@@ -219,7 +225,7 @@ export function computeJustifiedLayout(
     };
 
     const canvasHeight =
-      outerPadding * 2 + rowHeight * 2 + gap;
+      lowCountPadding * 2 + rowHeight * 2;
 
     return {
       rows: [firstRow, secondRow],

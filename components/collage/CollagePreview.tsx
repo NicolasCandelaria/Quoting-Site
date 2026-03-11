@@ -22,9 +22,11 @@ export function CollagePreview({ sourceImages, layout }: Props) {
 
     const offscreen = renderCollageToCanvas(sourceImages, layout, {
       lowCountSafeCover:
-        sourceImages.length === 2 || sourceImages.length === 3,
+        sourceImages.length === 2 ||
+        sourceImages.length === 3 ||
+        sourceImages.length === 4,
       fitMode:
-        sourceImages.length >= 2 && sourceImages.length <= 3
+        sourceImages.length >= 2 && sourceImages.length <= 4
           ? undefined
           : "contain",
     });
