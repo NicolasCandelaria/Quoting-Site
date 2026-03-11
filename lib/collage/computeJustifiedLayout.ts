@@ -169,16 +169,19 @@ export function computeJustifiedLayout(
   }
 
   // Special-case 4 images: 2x2 grid, compact and no-gap (same low-count treatment as 2 and 3).
+  // Use a narrower effective width so the two columns sit closer together (less horizontal gap).
   if (images.length === 4) {
     const lowCountMinH = 90;
     const lowCountMaxH = 160;
     const lowCountPadding = 16;
     const contentW = canvasWidth - 2 * lowCountPadding;
+    const effectiveWidth = contentW * 0.7; // narrower grid so columns aren't far apart
+    const startX = lowCountPadding + (contentW - effectiveWidth) / 2;
 
-    let rowHeight = contentW / 2;
+    let rowHeight = effectiveWidth / 2;
     rowHeight = Math.min(Math.max(rowHeight, lowCountMinH), lowCountMaxH);
 
-    const slotWidth = contentW / 2;
+    const slotWidth = effectiveWidth / 2;
     const firstRowY = lowCountPadding;
     const secondRowY = lowCountPadding + rowHeight;
 
@@ -188,14 +191,14 @@ export function computeJustifiedLayout(
       images: [
         {
           id: images[0]?.id,
-          x: lowCountPadding,
+          x: startX,
           y: firstRowY,
           width: slotWidth,
           height: rowHeight,
         },
         {
           id: images[1]?.id,
-          x: lowCountPadding + slotWidth,
+          x: startX + slotWidth,
           y: firstRowY,
           width: slotWidth,
           height: rowHeight,
@@ -209,14 +212,14 @@ export function computeJustifiedLayout(
       images: [
         {
           id: images[2]?.id,
-          x: lowCountPadding,
+          x: startX,
           y: secondRowY,
           width: slotWidth,
           height: rowHeight,
         },
         {
           id: images[3]?.id,
-          x: lowCountPadding + slotWidth,
+          x: startX + slotWidth,
           y: secondRowY,
           width: slotWidth,
           height: rowHeight,
