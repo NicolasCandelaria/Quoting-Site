@@ -48,16 +48,22 @@ export function computeJustifiedLayout(
   );
 
   // Special-case 2 images: aspect-ratio-aware single row, gap = 0.
+  // Tighter row height and padding to reduce empty canvas space.
   if (images.length === 2) {
+    const lowCountMinH = 90;
+    const lowCountMaxH = 180;
+    const lowCountPadding = 16;
+    const contentW = canvasWidth - 2 * lowCountPadding;
+
     const ar1 = images[0]?.aspectRatio ?? 1;
     const ar2 = images[1]?.aspectRatio ?? 1;
     const sumAr = ar1 + ar2;
-    let rowHeight = contentWidth / Math.max(sumAr, 0.001);
-    rowHeight = Math.min(Math.max(rowHeight, minRowHeight), maxRowHeight);
+    let rowHeight = contentW / Math.max(sumAr, 0.001);
+    rowHeight = Math.min(Math.max(rowHeight, lowCountMinH), lowCountMaxH);
 
-    const width1 = (contentWidth * ar1) / Math.max(sumAr, 0.001);
-    const width2 = contentWidth - width1;
-    const y = outerPadding;
+    const width1 = (contentW * ar1) / Math.max(sumAr, 0.001);
+    const width2 = contentW - width1;
+    const y = lowCountPadding;
 
     const row: LayoutRow = {
       height: rowHeight,
@@ -65,14 +71,14 @@ export function computeJustifiedLayout(
       images: [
         {
           id: images[0]?.id,
-          x: outerPadding,
+          x: lowCountPadding,
           y,
           width: width1,
           height: rowHeight,
         },
         {
           id: images[1]?.id,
-          x: outerPadding + width1,
+          x: lowCountPadding + width1,
           y,
           width: width2,
           height: rowHeight,
@@ -80,7 +86,7 @@ export function computeJustifiedLayout(
       ].filter((slot): slot is LayoutImageSlot => Boolean(slot.id)),
     };
 
-    const canvasHeight = outerPadding * 2 + rowHeight;
+    const canvasHeight = lowCountPadding * 2 + rowHeight;
 
     return {
       rows: [row],
@@ -90,26 +96,32 @@ export function computeJustifiedLayout(
   }
 
   // Special-case 3 images: aspect-ratio-aware top row (2 tiles) + full-width bottom, gap = 0.
+  // Tighter row heights and padding to reduce empty canvas space.
   if (images.length === 3) {
+    const lowCountMinH = 90;
+    const lowCountMaxH = 180;
+    const lowCountPadding = 16;
+    const contentW = canvasWidth - 2 * lowCountPadding;
+
     const ar1 = images[0]?.aspectRatio ?? 1;
     const ar2 = images[1]?.aspectRatio ?? 1;
     const ar3 = images[2]?.aspectRatio ?? 1;
     const sumArTop = ar1 + ar2;
 
-    let topRowHeight = contentWidth / Math.max(sumArTop, 0.001);
-    topRowHeight = Math.min(Math.max(topRowHeight, minRowHeight), maxRowHeight);
+    let topRowHeight = contentW / Math.max(sumArTop, 0.001);
+    topRowHeight = Math.min(Math.max(topRowHeight, lowCountMinH), lowCountMaxH);
 
-    let bottomRowHeight = contentWidth / Math.max(ar3, 0.001);
+    let bottomRowHeight = contentW / Math.max(ar3, 0.001);
     bottomRowHeight = Math.min(
-      Math.max(bottomRowHeight, minRowHeight),
-      maxRowHeight,
+      Math.max(bottomRowHeight, lowCountMinH),
+      lowCountMaxH,
     );
 
-    const width1 = (contentWidth * ar1) / Math.max(sumArTop, 0.001);
-    const width2 = contentWidth - width1;
+    const width1 = (contentW * ar1) / Math.max(sumArTop, 0.001);
+    const width2 = contentW - width1;
 
-    const topY = outerPadding;
-    const bottomY = outerPadding + topRowHeight;
+    const topY = lowCountPadding;
+    const bottomY = lowCountPadding + topRowHeight;
 
     const topRow: LayoutRow = {
       height: topRowHeight,
@@ -117,14 +129,14 @@ export function computeJustifiedLayout(
       images: [
         {
           id: images[0]?.id,
-          x: outerPadding,
+          x: lowCountPadding,
           y: topY,
           width: width1,
           height: topRowHeight,
         },
         {
           id: images[1]?.id,
-          x: outerPadding + width1,
+          x: lowCountPadding + width1,
           y: topY,
           width: width2,
           height: topRowHeight,
@@ -138,16 +150,16 @@ export function computeJustifiedLayout(
       images: [
         {
           id: images[2]?.id,
-          x: outerPadding,
+          x: lowCountPadding,
           y: bottomY,
-          width: contentWidth,
+          width: contentW,
           height: bottomRowHeight,
         },
       ].filter((slot): slot is LayoutImageSlot => Boolean(slot.id)),
     };
 
     const canvasHeight =
-      outerPadding * 2 + topRowHeight + bottomRowHeight;
+      lowCountPadding * 2 + topRowHeight + bottomRowHeight;
 
     return {
       rows: [topRow, bottomRow],
