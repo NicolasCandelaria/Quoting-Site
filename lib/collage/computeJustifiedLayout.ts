@@ -42,13 +42,51 @@ export function computeJustifiedLayout(
   const contentWidth = canvasWidth - 2 * outerPadding;
   const rows: LayoutRow[] = [];
 
+  const rowHeight = Math.min(
+    Math.max(targetRowHeight, minRowHeight),
+    maxRowHeight,
+  );
+
+  // Special-case 2 images: two centered slots in a narrower band.
+  if (images.length === 2) {
+    const narrowWidth = contentWidth * 0.7;
+    const startX = outerPadding + (contentWidth - narrowWidth) / 2;
+    const slotWidth =
+      (narrowWidth - gap) / 2;
+    const y = outerPadding;
+
+    const row: LayoutRow = {
+      height: rowHeight,
+      yOffset: 0,
+      images: [
+        {
+          id: images[0]?.id,
+          x: startX,
+          y,
+          width: slotWidth,
+          height: rowHeight,
+        },
+        {
+          id: images[1]?.id,
+          x: startX + slotWidth + gap,
+          y,
+          width: slotWidth,
+          height: rowHeight,
+        },
+      ].filter((slot): slot is LayoutImageSlot => Boolean(slot.id)),
+    };
+
+    const canvasHeight = outerPadding * 2 + rowHeight;
+
+    return {
+      rows: [row],
+      canvasWidth,
+      canvasHeight,
+    };
+  }
+
   // Special-case 3 images: 2 on top, 1 centered below.
   if (images.length === 3) {
-    const rowHeight = Math.min(
-      Math.max(targetRowHeight, minRowHeight),
-      maxRowHeight,
-    );
-
     const topSlotWidth =
       (contentWidth - gap) / 2; // two slots + one gap
     const bottomSlotWidth = contentWidth; // full width
@@ -101,6 +139,135 @@ export function computeJustifiedLayout(
     };
   }
 
+  // Special-case 4 images: 2x2 grid.
+  if (images.length === 4) {
+    const slotWidth =
+      (contentWidth - gap) / 2;
+
+    const firstRowY = outerPadding;
+    const secondRowY = outerPadding + rowHeight + gap;
+
+    const firstRow: LayoutRow = {
+      height: rowHeight,
+      yOffset: 0,
+      images: [
+        {
+          id: images[0]?.id,
+          x: outerPadding,
+          y: firstRowY,
+          width: slotWidth,
+          height: rowHeight,
+        },
+        {
+          id: images[1]?.id,
+          x: outerPadding + slotWidth + gap,
+          y: firstRowY,
+          width: slotWidth,
+          height: rowHeight,
+        },
+      ].filter((slot): slot is LayoutImageSlot => Boolean(slot.id)),
+    };
+
+    const secondRow: LayoutRow = {
+      height: rowHeight,
+      yOffset: rowHeight + gap,
+      images: [
+        {
+          id: images[2]?.id,
+          x: outerPadding,
+          y: secondRowY,
+          width: slotWidth,
+          height: rowHeight,
+        },
+        {
+          id: images[3]?.id,
+          x: outerPadding + slotWidth + gap,
+          y: secondRowY,
+          width: slotWidth,
+          height: rowHeight,
+        },
+      ].filter((slot): slot is LayoutImageSlot => Boolean(slot.id)),
+    };
+
+    const canvasHeight =
+      outerPadding * 2 + rowHeight * 2 + gap;
+
+    return {
+      rows: [firstRow, secondRow],
+      canvasWidth,
+      canvasHeight,
+    };
+  }
+
+  // Special-case 5 images: 3 on top, 2 below.
+  if (images.length === 5) {
+    const topSlotWidth =
+      (contentWidth - gap * 2) / 3;
+    const bottomSlotWidth =
+      (contentWidth - gap) / 2;
+
+    const topY = outerPadding;
+    const bottomY = outerPadding + rowHeight + gap;
+
+    const topRow: LayoutRow = {
+      height: rowHeight,
+      yOffset: 0,
+      images: [
+        {
+          id: images[0]?.id,
+          x: outerPadding,
+          y: topY,
+          width: topSlotWidth,
+          height: rowHeight,
+        },
+        {
+          id: images[1]?.id,
+          x: outerPadding + topSlotWidth + gap,
+          y: topY,
+          width: topSlotWidth,
+          height: rowHeight,
+        },
+        {
+          id: images[2]?.id,
+          x: outerPadding + (topSlotWidth + gap) * 2,
+          y: topY,
+          width: topSlotWidth,
+          height: rowHeight,
+        },
+      ].filter((slot): slot is LayoutImageSlot => Boolean(slot.id)),
+    };
+
+    const bottomRow: LayoutRow = {
+      height: rowHeight,
+      yOffset: rowHeight + gap,
+      images: [
+        {
+          id: images[3]?.id,
+          x: outerPadding,
+          y: bottomY,
+          width: bottomSlotWidth,
+          height: rowHeight,
+        },
+        {
+          id: images[4]?.id,
+          x: outerPadding + bottomSlotWidth + gap,
+          y: bottomY,
+          width: bottomSlotWidth,
+          height: rowHeight,
+        },
+      ].filter((slot): slot is LayoutImageSlot => Boolean(slot.id)),
+    };
+
+    const canvasHeight =
+      outerPadding * 2 + rowHeight * 2 + gap;
+
+    return {
+      rows: [topRow, bottomRow],
+      canvasWidth,
+      canvasHeight,
+    };
+  }
+
   // Simple grid layout for all other counts:
   // - Fill images left-to-right, then wrap to the next row (row-major).
   // - Use up to 3 columns, or fewer if there are fewer images.
@@ -110,10 +277,6 @@ export function computeJustifiedLayout(
 
   const slotWidth =
     (contentWidth - gap * Math.max(0, columns - 1)) / Math.max(columns, 1);
-  const rowHeight = Math.min(
-    Math.max(targetRowHeight, minRowHeight),
-    maxRowHeight,
-  );
 
   for (let rowIndex = 0; rowIndex < rowsCount; rowIndex += 1) {
     const slots: LayoutImageSlot[] = [];
