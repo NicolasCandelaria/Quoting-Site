@@ -143,7 +143,10 @@ export function CollageBuilderModal({
     setErrorMessage(null);
 
     try {
-      const canvas = renderCollageToCanvas(validImages, layout);
+      const canvas = renderCollageToCanvas(validImages, layout, {
+        fitMode:
+          validImages.length >= 2 && validImages.length <= 3 ? "cover" : "contain",
+      });
       const blob = await exportCanvasToJpegBlob(canvas, 0.9);
 
       const safeProject = sanitizeForFilename(projectName || "project");

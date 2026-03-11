@@ -20,7 +20,10 @@ export function CollagePreview({ sourceImages, layout }: Props) {
     canvas.width = layout.canvasWidth;
     canvas.height = layout.canvasHeight;
 
-    const offscreen = renderCollageToCanvas(sourceImages, layout);
+    const offscreen = renderCollageToCanvas(sourceImages, layout, {
+      fitMode:
+        sourceImages.length >= 2 && sourceImages.length <= 3 ? "cover" : "contain",
+    });
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 

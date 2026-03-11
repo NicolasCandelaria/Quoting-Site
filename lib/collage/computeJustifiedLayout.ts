@@ -47,34 +47,33 @@ export function computeJustifiedLayout(
     maxRowHeight,
   );
 
-  // Special-case 2 images: 2x1 vertical grid (stacked).
+  // Special-case 2 images: fixed 2-column layout, gap = 0.
   if (images.length === 2) {
-    const slotWidth = contentWidth;
-    const firstY = outerPadding;
-    const secondY = outerPadding + rowHeight + gap;
+    const slotWidth = contentWidth / 2;
+    const y = outerPadding;
 
     const row: LayoutRow = {
-      height: rowHeight * 2 + gap,
+      height: rowHeight,
       yOffset: 0,
       images: [
         {
           id: images[0]?.id,
           x: outerPadding,
-          y: firstY,
+          y,
           width: slotWidth,
           height: rowHeight,
         },
         {
           id: images[1]?.id,
-          x: outerPadding,
-          y: secondY,
+          x: outerPadding + slotWidth,
+          y,
           width: slotWidth,
           height: rowHeight,
         },
       ].filter((slot): slot is LayoutImageSlot => Boolean(slot.id)),
     };
 
-    const canvasHeight = outerPadding * 2 + rowHeight * 2 + gap;
+    const canvasHeight = outerPadding * 2 + rowHeight;
 
     return {
       rows: [row],
@@ -83,14 +82,13 @@ export function computeJustifiedLayout(
     };
   }
 
-  // Special-case 3 images: 2 on top, 1 centered below.
+  // Special-case 3 images: top row 2 equal tiles, bottom row 1 full-width, gap = 0.
   if (images.length === 3) {
-    const topSlotWidth =
-      (contentWidth - gap) / 2; // two slots + one gap
-    const bottomSlotWidth = contentWidth; // full width
+    const topSlotWidth = contentWidth / 2;
+    const bottomSlotWidth = contentWidth;
 
     const topY = outerPadding;
-    const bottomY = outerPadding + rowHeight + gap;
+    const bottomY = outerPadding + rowHeight;
 
     const topRow: LayoutRow = {
       height: rowHeight,
@@ -105,7 +103,7 @@ export function computeJustifiedLayout(
         },
         {
           id: images[1]?.id,
-          x: outerPadding + topSlotWidth + gap,
+          x: outerPadding + topSlotWidth,
           y: topY,
           width: topSlotWidth,
           height: rowHeight,
@@ -115,7 +113,7 @@ export function computeJustifiedLayout(
 
     const bottomRow: LayoutRow = {
       height: rowHeight,
-      yOffset: rowHeight + gap,
+      yOffset: rowHeight,
       images: [
         {
           id: images[2]?.id,
@@ -127,8 +125,7 @@ export function computeJustifiedLayout(
       ].filter((slot): slot is LayoutImageSlot => Boolean(slot.id)),
     };
 
-    const canvasHeight =
-      outerPadding * 2 + rowHeight * 2 + gap;
+    const canvasHeight = outerPadding * 2 + rowHeight * 2;
 
     return {
       rows: [topRow, bottomRow],
