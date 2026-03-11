@@ -79,6 +79,7 @@ export default function EditItemPage() {
         initial={initialItem}
         onSubmit={handleSubmit}
         onCancel={() => router.push(`/admin/projects/${projectId}`)}
+        projectName={project.name}
       />
     </div>
   );
