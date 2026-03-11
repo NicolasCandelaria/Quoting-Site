@@ -48,21 +48,23 @@ export function computeJustifiedLayout(
   );
 
   // Special-case 2 images: aspect-ratio-aware single row, gap = 0.
-  // Tighter row height and padding to reduce empty canvas space.
+  // Use a narrow band (55% of content width) so the two images sit closer together.
   if (images.length === 2) {
     const lowCountMinH = 90;
     const lowCountMaxH = 160;
     const lowCountPadding = 16;
     const contentW = canvasWidth - 2 * lowCountPadding;
+    const effectiveWidth = contentW * 0.55;
+    const startX = lowCountPadding + (contentW - effectiveWidth) / 2;
 
     const ar1 = images[0]?.aspectRatio ?? 1;
     const ar2 = images[1]?.aspectRatio ?? 1;
     const sumAr = ar1 + ar2;
-    let rowHeight = contentW / Math.max(sumAr, 0.001);
+    let rowHeight = effectiveWidth / Math.max(sumAr, 0.001);
     rowHeight = Math.min(Math.max(rowHeight, lowCountMinH), lowCountMaxH);
 
-    const width1 = (contentW * ar1) / Math.max(sumAr, 0.001);
-    const width2 = contentW - width1;
+    const width1 = (effectiveWidth * ar1) / Math.max(sumAr, 0.001);
+    const width2 = effectiveWidth - width1;
     const y = lowCountPadding;
 
     const row: LayoutRow = {
@@ -71,14 +73,14 @@ export function computeJustifiedLayout(
       images: [
         {
           id: images[0]?.id,
-          x: lowCountPadding,
+          x: startX,
           y,
           width: width1,
           height: rowHeight,
         },
         {
           id: images[1]?.id,
-          x: lowCountPadding + width1,
+          x: startX + width1,
           y,
           width: width2,
           height: rowHeight,
@@ -96,29 +98,31 @@ export function computeJustifiedLayout(
   }
 
   // Special-case 3 images: aspect-ratio-aware top row (2 tiles) + full-width bottom, gap = 0.
-  // Tighter row heights and padding to reduce empty canvas space.
+  // Use a narrow band (55% of content width) so the three images sit closer together.
   if (images.length === 3) {
     const lowCountMinH = 90;
     const lowCountMaxH = 160;
     const lowCountPadding = 16;
     const contentW = canvasWidth - 2 * lowCountPadding;
+    const effectiveWidth = contentW * 0.55;
+    const startX = lowCountPadding + (contentW - effectiveWidth) / 2;
 
     const ar1 = images[0]?.aspectRatio ?? 1;
     const ar2 = images[1]?.aspectRatio ?? 1;
     const ar3 = images[2]?.aspectRatio ?? 1;
     const sumArTop = ar1 + ar2;
 
-    let topRowHeight = contentW / Math.max(sumArTop, 0.001);
+    let topRowHeight = effectiveWidth / Math.max(sumArTop, 0.001);
     topRowHeight = Math.min(Math.max(topRowHeight, lowCountMinH), lowCountMaxH);
 
-    let bottomRowHeight = contentW / Math.max(ar3, 0.001);
+    let bottomRowHeight = effectiveWidth / Math.max(ar3, 0.001);
     bottomRowHeight = Math.min(
       Math.max(bottomRowHeight, lowCountMinH),
       lowCountMaxH,
     );
 
-    const width1 = (contentW * ar1) / Math.max(sumArTop, 0.001);
-    const width2 = contentW - width1;
+    const width1 = (effectiveWidth * ar1) / Math.max(sumArTop, 0.001);
+    const width2 = effectiveWidth - width1;
 
     const topY = lowCountPadding;
     const bottomY = lowCountPadding + topRowHeight;
@@ -129,14 +133,14 @@ export function computeJustifiedLayout(
       images: [
         {
           id: images[0]?.id,
-          x: lowCountPadding,
+          x: startX,
           y: topY,
           width: width1,
           height: topRowHeight,
         },
         {
           id: images[1]?.id,
-          x: lowCountPadding + width1,
+          x: startX + width1,
           y: topY,
           width: width2,
           height: topRowHeight,
@@ -150,9 +154,9 @@ export function computeJustifiedLayout(
       images: [
         {
           id: images[2]?.id,
-          x: lowCountPadding,
+          x: startX,
           y: bottomY,
-          width: contentW,
+          width: effectiveWidth,
           height: bottomRowHeight,
         },
       ].filter((slot): slot is LayoutImageSlot => Boolean(slot.id)),
@@ -175,7 +179,7 @@ export function computeJustifiedLayout(
     const lowCountMaxH = 160;
     const lowCountPadding = 16;
     const contentW = canvasWidth - 2 * lowCountPadding;
-    const effectiveWidth = contentW * 0.7; // narrower grid so columns aren't far apart
+    const effectiveWidth = contentW * 0.55; // narrow grid so columns sit close together
     const startX = lowCountPadding + (contentW - effectiveWidth) / 2;
 
     let rowHeight = effectiveWidth / 2;
