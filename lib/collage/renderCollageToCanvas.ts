@@ -36,25 +36,13 @@ function drawCollageOnContext(
       const imageElement = new Image();
       imageElement.src = img.dataUrl;
 
-      const imgAspect = img.naturalWidth / Math.max(img.naturalHeight, 1);
-      const slotAspect = w / Math.max(h, 1);
-
-      let drawWidth = w;
-      let drawHeight = h;
-      let offsetX = 0;
-      let offsetY = 0;
-
-      if (imgAspect > slotAspect) {
-        drawHeight = h;
-        drawWidth = h * imgAspect;
-        offsetX = x + (w - drawWidth) / 2;
-        offsetY = y;
-      } else {
-        drawWidth = w;
-        drawHeight = w / imgAspect;
-        offsetX = x;
-        offsetY = y + (h - drawHeight) / 2;
-      }
+      const sourceWidth = Math.max(img.naturalWidth, 1);
+      const sourceHeight = Math.max(img.naturalHeight, 1);
+      const scale = Math.min(w / sourceWidth, h / sourceHeight);
+      const drawWidth = sourceWidth * scale;
+      const drawHeight = sourceHeight * scale;
+      const offsetX = x + (w - drawWidth) / 2;
+      const offsetY = y + (h - drawHeight) / 2;
 
       ctx.drawImage(imageElement, offsetX, offsetY, drawWidth, drawHeight);
       ctx.restore();
