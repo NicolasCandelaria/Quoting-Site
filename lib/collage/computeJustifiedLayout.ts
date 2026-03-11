@@ -47,36 +47,34 @@ export function computeJustifiedLayout(
     maxRowHeight,
   );
 
-  // Special-case 2 images: two centered slots in a narrower band.
+  // Special-case 2 images: 2x1 vertical grid (stacked).
   if (images.length === 2) {
-    const narrowWidth = contentWidth * 0.7;
-    const startX = outerPadding + (contentWidth - narrowWidth) / 2;
-    const slotWidth =
-      (narrowWidth - gap) / 2;
-    const y = outerPadding;
+    const slotWidth = contentWidth;
+    const firstY = outerPadding;
+    const secondY = outerPadding + rowHeight + gap;
 
     const row: LayoutRow = {
-      height: rowHeight,
+      height: rowHeight * 2 + gap,
       yOffset: 0,
       images: [
         {
           id: images[0]?.id,
-          x: startX,
-          y,
+          x: outerPadding,
+          y: firstY,
           width: slotWidth,
           height: rowHeight,
         },
         {
           id: images[1]?.id,
-          x: startX + slotWidth + gap,
-          y,
+          x: outerPadding,
+          y: secondY,
           width: slotWidth,
           height: rowHeight,
         },
       ].filter((slot): slot is LayoutImageSlot => Boolean(slot.id)),
     };
 
-    const canvasHeight = outerPadding * 2 + rowHeight;
+    const canvasHeight = outerPadding * 2 + rowHeight * 2 + gap;
 
     return {
       rows: [row],
