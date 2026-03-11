@@ -17,9 +17,9 @@ type LayoutOptions = {
 const DEFAULTS: Required<LayoutOptions> = {
   canvasWidth: 1600,
   outerPadding: 32,
-  targetRowHeight: 320,
-  minRowHeight: 220,
-  maxRowHeight: 380,
+  targetRowHeight: 240,
+  minRowHeight: 180,
+  maxRowHeight: 300,
   gap: 16,
 };
 

@@ -16,7 +16,7 @@ function drawCollageOnContext(
       ctx.save();
       const radius = 16;
       const x = slot.x;
-      const y = slot.y + row.yOffset;
+      const y = slot.y;
       const w = slot.width;
       const h = slot.height;
 
