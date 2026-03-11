@@ -1,10 +1,5 @@
 import type { CollageLayout, LayoutImageSlot, LayoutRow } from "./types";
 
-type InputImage = {
-  id: string;
-  aspectRatio: number;
-};
-
 type LayoutOptions = {
   canvasWidth?: number;
   outerPadding?: number;
@@ -24,7 +19,7 @@ const DEFAULTS: Required<LayoutOptions> = {
 };
 
 export function computeJustifiedLayout(
-  images: InputImage[],
+  images: { id: string; aspectRatio: number }[],
   options: LayoutOptions = {},
 ): CollageLayout {
   const {
@@ -47,114 +42,55 @@ export function computeJustifiedLayout(
   const contentWidth = canvasWidth - 2 * outerPadding;
   const rows: LayoutRow[] = [];
 
-  let currentRow: InputImage[] = [];
-  let currentSumAspect = 0;
+  // Simple grid layout:
+  // - Fill images left-to-right, then wrap to the next row (row-major).
+  // - Use up to 3 columns, or fewer if there are fewer images.
+  const maxColumns = 3;
+  const columns = Math.min(maxColumns, images.length);
+  const rowsCount = Math.ceil(images.length / columns);
 
-  const finalizeRow = (
-    rowImages: InputImage[],
-    isLastRow: boolean,
-    accumulatedHeight: number,
-  ): { row: LayoutRow; height: number } => {
-    const count = rowImages.length;
-    const gapsWidth = gap * Math.max(0, count - 1);
-    const availableWidth = contentWidth - gapsWidth;
+  const slotWidth =
+    (contentWidth - gap * Math.max(0, columns - 1)) / Math.max(columns, 1);
+  const rowHeight = Math.min(
+    Math.max(targetRowHeight, minRowHeight),
+    maxRowHeight,
+  );
 
-    let sumAspect = 0;
-    rowImages.forEach((img) => {
-      sumAspect += img.aspectRatio;
-    });
-
-    let rowHeight = availableWidth / Math.max(sumAspect, 0.0001);
-    if (!isLastRow) {
-      rowHeight = Math.min(Math.max(rowHeight, minRowHeight), maxRowHeight);
-    } else {
-      if (rowHeight < minRowHeight) {
-        rowHeight = minRowHeight;
-      } else if (rowHeight > maxRowHeight) {
-        rowHeight = maxRowHeight;
-      }
-    }
-
+  for (let rowIndex = 0; rowIndex < rowsCount; rowIndex += 1) {
     const slots: LayoutImageSlot[] = [];
-    let x = outerPadding;
-    let totalWidth = 0;
 
-    rowImages.forEach((img, index) => {
-      const idealWidth = rowHeight * img.aspectRatio;
-      const width = idealWidth;
+    for (let colIndex = 0; colIndex < columns; colIndex += 1) {
+      const imageIndex = rowIndex * columns + colIndex;
+      const image = images[imageIndex];
+      if (!image) continue;
+
+      const x =
+        outerPadding + colIndex * (slotWidth + gap);
+      const y =
+        outerPadding + rowIndex * (rowHeight + gap);
+
       slots.push({
-        id: img.id,
+        id: image.id,
         x,
-        y: accumulatedHeight + outerPadding,
-        width,
+        y,
+        width: slotWidth,
         height: rowHeight,
       });
-      x += width + gap;
-      totalWidth += width;
-    });
-
-    const usedWidth = totalWidth + gapsWidth;
-    if (isLastRow && usedWidth < contentWidth) {
-      const shift = (contentWidth - usedWidth) / 2;
-      slots.forEach((slot) => {
-        slot.x += shift;
-      });
-    } else if (!isLastRow && usedWidth !== contentWidth && totalWidth > 0) {
-      const scale = (contentWidth - gapsWidth) / totalWidth;
-      x = outerPadding;
-      slots.forEach((slot) => {
-        const width = slot.width * scale;
-        slot.x = x;
-        slot.width = width;
-        slot.height = rowHeight;
-        slot.y = accumulatedHeight + outerPadding;
-        x += width + gap;
-      });
     }
 
-    const row: LayoutRow = {
+    rows.push({
       height: rowHeight,
-      yOffset: accumulatedHeight,
+      yOffset: rowIndex * (rowHeight + gap),
       images: slots,
-    };
-
-    return { row, height: rowHeight };
-  };
-
-  let accumulatedHeight = 0;
-
-  for (let i = 0; i < images.length; i += 1) {
-    const img = images[i];
-    currentRow.push(img);
-    currentSumAspect += img.aspectRatio;
-
-    const gapsWidth = gap * Math.max(0, currentRow.length - 1);
-    const availableWidth = contentWidth - gapsWidth;
-    const rowHeight = availableWidth / Math.max(currentSumAspect, 0.0001);
-
-    if (rowHeight <= targetRowHeight || i === images.length - 1) {
-      const { row, height } = finalizeRow(
-        currentRow,
-        i === images.length - 1,
-        accumulatedHeight,
-      );
-      rows.push(row);
-      accumulatedHeight += height + gap;
-      currentRow = [];
-      currentSumAspect = 0;
-    }
-  }
-
-  if (currentRow.length > 0) {
-    const { row, height } = finalizeRow(currentRow, true, accumulatedHeight);
-    rows.push(row);
-    accumulatedHeight += height + gap;
+    });
   }
 
   const canvasHeight =
     rows.length === 0
       ? canvasWidth * 0.6
-      : accumulatedHeight + outerPadding - gap;
+      : outerPadding * 2 +
+        rowsCount * rowHeight +
+        gap * Math.max(0, rowsCount - 1);
 
   return {
     rows,
