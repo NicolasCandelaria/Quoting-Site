@@ -1,8 +1,25 @@
 import type { CollageLayout, SourceImage } from "./types";
 
+const SAFE_COVER_MISMATCH_THRESHOLD = 1.8;
+
 type DrawOptions = {
   fitMode?: "cover" | "contain";
+  /** When true (2 or 3 images), choose cover vs contain per slot from aspect-ratio mismatch. */
+  lowCountSafeCover?: boolean;
 };
+
+function getSlotFitMode(
+  img: SourceImage,
+  slotWidth: number,
+  slotHeight: number,
+): "cover" | "contain" {
+  const sourceWidth = Math.max(img.naturalWidth, 1);
+  const sourceHeight = Math.max(img.naturalHeight, 1);
+  const imageAR = sourceWidth / sourceHeight;
+  const slotAR = slotWidth / Math.max(slotHeight, 1);
+  const mismatch = Math.max(imageAR / slotAR, slotAR / imageAR);
+  return mismatch <= SAFE_COVER_MISMATCH_THRESHOLD ? "cover" : "contain";
+}
 
 function drawCollageOnContext(
   ctx: CanvasRenderingContext2D,
@@ -10,17 +27,22 @@ function drawCollageOnContext(
   sourceImages: SourceImage[],
   options: DrawOptions = {},
 ) {
-  const fitMode = options.fitMode ?? "contain";
+  const globalFitMode = options.fitMode ?? "contain";
+  const lowCountSafeCover = options.lowCountSafeCover ?? false;
 
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, layout.canvasWidth, layout.canvasHeight);
-
-  const radius = fitMode === "cover" ? 0 : 16;
 
   for (const row of layout.rows) {
     for (const slot of row.images) {
       const img = sourceImages.find((s) => s.id === slot.id);
       if (!img || img.decodeError) continue;
+
+      const fitMode = lowCountSafeCover
+        ? getSlotFitMode(img, slot.width, slot.height)
+        : globalFitMode;
+
+      const radius = fitMode === "cover" ? 0 : 16;
 
       ctx.save();
       const x = slot.x;

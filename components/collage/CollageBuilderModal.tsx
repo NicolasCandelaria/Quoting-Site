@@ -144,8 +144,12 @@ export function CollageBuilderModal({
 
     try {
       const canvas = renderCollageToCanvas(validImages, layout, {
+        lowCountSafeCover:
+          validImages.length === 2 || validImages.length === 3,
         fitMode:
-          validImages.length >= 2 && validImages.length <= 3 ? "cover" : "contain",
+          validImages.length >= 2 && validImages.length <= 3
+            ? undefined
+            : "contain",
       });
       const blob = await exportCanvasToJpegBlob(canvas, 0.9);
 

@@ -21,8 +21,12 @@ export function CollagePreview({ sourceImages, layout }: Props) {
     canvas.height = layout.canvasHeight;
 
     const offscreen = renderCollageToCanvas(sourceImages, layout, {
+      lowCountSafeCover:
+        sourceImages.length === 2 || sourceImages.length === 3,
       fitMode:
-        sourceImages.length >= 2 && sourceImages.length <= 3 ? "cover" : "contain",
+        sourceImages.length >= 2 && sourceImages.length <= 3
+          ? undefined
+          : "contain",
     });
     const ctx = canvas.getContext("2d");
     if (!ctx) return;

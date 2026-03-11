@@ -47,9 +47,16 @@ export function computeJustifiedLayout(
     maxRowHeight,
   );
 
-  // Special-case 2 images: fixed 2-column layout, gap = 0.
+  // Special-case 2 images: aspect-ratio-aware single row, gap = 0.
   if (images.length === 2) {
-    const slotWidth = contentWidth / 2;
+    const ar1 = images[0]?.aspectRatio ?? 1;
+    const ar2 = images[1]?.aspectRatio ?? 1;
+    const sumAr = ar1 + ar2;
+    let rowHeight = contentWidth / Math.max(sumAr, 0.001);
+    rowHeight = Math.min(Math.max(rowHeight, minRowHeight), maxRowHeight);
+
+    const width1 = (contentWidth * ar1) / Math.max(sumAr, 0.001);
+    const width2 = contentWidth - width1;
     const y = outerPadding;
 
     const row: LayoutRow = {
@@ -60,14 +67,14 @@ export function computeJustifiedLayout(
           id: images[0]?.id,
           x: outerPadding,
           y,
-          width: slotWidth,
+          width: width1,
           height: rowHeight,
         },
         {
           id: images[1]?.id,
-          x: outerPadding + slotWidth,
+          x: outerPadding + width1,
           y,
-          width: slotWidth,
+          width: width2,
           height: rowHeight,
         },
       ].filter((slot): slot is LayoutImageSlot => Boolean(slot.id)),
@@ -82,50 +89,65 @@ export function computeJustifiedLayout(
     };
   }
 
-  // Special-case 3 images: top row 2 equal tiles, bottom row 1 full-width, gap = 0.
+  // Special-case 3 images: aspect-ratio-aware top row (2 tiles) + full-width bottom, gap = 0.
   if (images.length === 3) {
-    const topSlotWidth = contentWidth / 2;
-    const bottomSlotWidth = contentWidth;
+    const ar1 = images[0]?.aspectRatio ?? 1;
+    const ar2 = images[1]?.aspectRatio ?? 1;
+    const ar3 = images[2]?.aspectRatio ?? 1;
+    const sumArTop = ar1 + ar2;
+
+    let topRowHeight = contentWidth / Math.max(sumArTop, 0.001);
+    topRowHeight = Math.min(Math.max(topRowHeight, minRowHeight), maxRowHeight);
+
+    let bottomRowHeight = contentWidth / Math.max(ar3, 0.001);
+    bottomRowHeight = Math.min(
+      Math.max(bottomRowHeight, minRowHeight),
+      maxRowHeight,
+    );
+
+    const width1 = (contentWidth * ar1) / Math.max(sumArTop, 0.001);
+    const width2 = contentWidth - width1;
 
     const topY = outerPadding;
-    const bottomY = outerPadding + rowHeight;
+    const bottomY = outerPadding + topRowHeight;
 
     const topRow: LayoutRow = {
-      height: rowHeight,
+      height: topRowHeight,
       yOffset: 0,
       images: [
         {
           id: images[0]?.id,
           x: outerPadding,
           y: topY,
-          width: topSlotWidth,
-          height: rowHeight,
+          width: width1,
+          height: topRowHeight,
         },
         {
           id: images[1]?.id,
-          x: outerPadding + topSlotWidth,
+          x: outerPadding + width1,
           y: topY,
-          width: topSlotWidth,
-          height: rowHeight,
+          width: width2,
+          height: topRowHeight,
         },
       ].filter((slot): slot is LayoutImageSlot => Boolean(slot.id)),
     };
 
     const bottomRow: LayoutRow = {
-      height: rowHeight,
-      yOffset: rowHeight,
+      height: bottomRowHeight,
+      yOffset: topRowHeight,
       images: [
         {
           id: images[2]?.id,
           x: outerPadding,
           y: bottomY,
-          width: bottomSlotWidth,
-          height: rowHeight,
+          width: contentWidth,
+          height: bottomRowHeight,
         },
       ].filter((slot): slot is LayoutImageSlot => Boolean(slot.id)),
     };
 
-    const canvasHeight = outerPadding * 2 + rowHeight * 2;
+    const canvasHeight =
+      outerPadding * 2 + topRowHeight + bottomRowHeight;
 
     return {
       rows: [topRow, bottomRow],
