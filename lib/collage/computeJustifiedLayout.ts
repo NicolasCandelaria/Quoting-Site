@@ -42,7 +42,66 @@ export function computeJustifiedLayout(
   const contentWidth = canvasWidth - 2 * outerPadding;
   const rows: LayoutRow[] = [];
 
-  // Simple grid layout:
+  // Special-case 3 images: 2 on top, 1 centered below.
+  if (images.length === 3) {
+    const rowHeight = Math.min(
+      Math.max(targetRowHeight, minRowHeight),
+      maxRowHeight,
+    );
+
+    const topSlotWidth =
+      (contentWidth - gap) / 2; // two slots + one gap
+    const bottomSlotWidth = contentWidth; // full width
+
+    const topY = outerPadding;
+    const bottomY = outerPadding + rowHeight + gap;
+
+    const topRow: LayoutRow = {
+      height: rowHeight,
+      yOffset: 0,
+      images: [
+        {
+          id: images[0]?.id,
+          x: outerPadding,
+          y: topY,
+          width: topSlotWidth,
+          height: rowHeight,
+        },
+        {
+          id: images[1]?.id,
+          x: outerPadding + topSlotWidth + gap,
+          y: topY,
+          width: topSlotWidth,
+          height: rowHeight,
+        },
+      ].filter((slot): slot is LayoutImageSlot => Boolean(slot.id)),
+    };
+
+    const bottomRow: LayoutRow = {
+      height: rowHeight,
+      yOffset: rowHeight + gap,
+      images: [
+        {
+          id: images[2]?.id,
+          x: outerPadding,
+          y: bottomY,
+          width: bottomSlotWidth,
+          height: rowHeight,
+        },
+      ].filter((slot): slot is LayoutImageSlot => Boolean(slot.id)),
+    };
+
+    const canvasHeight =
+      outerPadding * 2 + rowHeight * 2 + gap;
+
+    return {
+      rows: [topRow, bottomRow],
+      canvasWidth,
+      canvasHeight,
+    };
+  }
+
+  // Simple grid layout for all other counts:
   // - Fill images left-to-right, then wrap to the next row (row-major).
   // - Use up to 3 columns, or fewer if there are fewer images.
   const maxColumns = 3;
