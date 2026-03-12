@@ -123,3 +123,103 @@ body {
 .page-main {
   @apply flex-1 w-full max-w-6xl mx-auto px-4 py-6 md:py-10;
 }
+
+/* Mini fireworks */
+.mini-fireworks-burst {
+  position: relative;
+  width: 96px;
+  height: 96px;
+}
+
+.mini-fireworks-dot {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: #facc15;
+  opacity: 0;
+  animation: mini-firework-particle 750ms ease-out forwards;
+}
+
+.mini-fireworks-dot-2 {
+  background: #fb7185;
+}
+
+.mini-fireworks-dot-3 {
+  background: #38bdf8;
+}
+
+.mini-fireworks-dot-4 {
+  background: #a855f7;
+}
+
+.mini-fireworks-dot-5 {
+  background: #22c55e;
+}
+
+.mini-fireworks-dot-6 {
+  background: #f97316;
+}
+
+.mini-fireworks-dot-7 {
+  background: #e5e7eb;
+}
+
+.mini-fireworks-dot-8 {
+  background: #f9a8d4;
+}
+
+.mini-fireworks-dot-1 {
+  --dx: 0px;
+  --dy: -40px;
+}
+
+.mini-fireworks-dot-2 {
+  --dx: 30px;
+  --dy: -20px;
+}
+
+.mini-fireworks-dot-3 {
+  --dx: -28px;
+  --dy: -22px;
+}
+
+.mini-fireworks-dot-4 {
+  --dx: 20px;
+  --dy: 10px;
+}
+
+.mini-fireworks-dot-5 {
+  --dx: -18px;
+  --dy: 14px;
+}
+
+.mini-fireworks-dot-6 {
+  --dx: 36px;
+  --dy: -4px;
+}
+
+.mini-fireworks-dot-7 {
+  --dx: -34px;
+  --dy: -6px;
+}
+
+.mini-fireworks-dot-8 {
+  --dx: 0px;
+  --dy: 26px;
+}
+
+@keyframes mini-firework-particle {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.4);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--dy)) scale(1);
+  }
+}
+

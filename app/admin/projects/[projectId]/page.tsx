@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import type { Project, Item } from "@/lib/models";
 import { getItemPreviewImage } from "@/lib/item-image";
@@ -9,10 +9,12 @@ import { exportProjectPdf } from "@/lib/export-pdf";
 import { fetchProject, removeItem, updateProject, deleteProject } from "@/lib/api";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { formatQuoteDate } from "@/lib/format-date";
+import { MiniFireworks } from "@/components/MiniFireworks";
 
 export default function ProjectDetailPage() {
   const params = useParams<{ projectId: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const projectId = params.projectId;
 
   const [project, setProject] = useState<Project | null>(null);
@@ -23,6 +25,7 @@ export default function ProjectDetailPage() {
   const [exporting, setExporting] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
   const [confirmDeleteProject, setConfirmDeleteProject] = useState(false);
+  const [showItemSavedFireworks, setShowItemSavedFireworks] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -40,6 +43,26 @@ export default function ProjectDetailPage() {
 
     void load();
   }, [projectId]);
+
+  useEffect(() => {
+    const fromItemSave = searchParams.get("savedItem") === "1";
+    if (!fromItemSave) return;
+    setSavedNotice("Item Saved");
+    setShowItemSavedFireworks(true);
+
+    const noticeTimeout = window.setTimeout(() => setSavedNotice(""), 2500);
+    const fireworksTimeout = window.setTimeout(
+      () => setShowItemSavedFireworks(false),
+      900,
+    );
+
+    router.replace(`/admin/projects/${projectId}`, { scroll: false });
+
+    return () => {
+      window.clearTimeout(noticeTimeout);
+      window.clearTimeout(fireworksTimeout);
+    };
+  }, [projectId, router, searchParams]);
 
   const handleUpdate = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -163,6 +186,7 @@ export default function ProjectDetailPage() {
 
   return (
     <div className="flex flex-col gap-8">
+      {showItemSavedFireworks && <MiniFireworks />}
       <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-page-title font-semibold text-text-primary">
