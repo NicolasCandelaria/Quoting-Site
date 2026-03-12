@@ -33,7 +33,7 @@ export default function EditItemPage() {
 
     try {
       await createOrUpdateItem(projectId, item);
-      router.push(`/admin/projects/${projectId}`);
+      router.push(`/admin/projects/${projectId}?savedItem=1`);
     } catch (error) {
       const message =
         error instanceof Error
