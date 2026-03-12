@@ -3,11 +3,13 @@
 import { useState } from "react";
 import type { Item, PriceTier } from "@/lib/models";
 import { ImageDropzone } from "./ImageDropzone";
+import { CollageBuilderModal } from "./collage/CollageBuilderModal";
 
 type ItemFormProps = {
   initial?: Item;
   onSubmit: (item: Item) => void;
   onCancel?: () => void;
+  projectName: string;
 };
 
 const emptyItemBase: Omit<Item, "id"> = {
@@ -26,10 +28,16 @@ const emptyItemBase: Omit<Item, "id"> = {
   priceTiers: [],
 };
 
-export function ItemForm({ initial, onSubmit, onCancel }: ItemFormProps) {
+export function ItemForm({
+  initial,
+  onSubmit,
+  onCancel,
+  projectName,
+}: ItemFormProps) {
   const [item, setItem] = useState<Item>(
     initial ?? { id: crypto.randomUUID(), ...emptyItemBase },
   );
+  const [isCollageModalOpen, setIsCollageModalOpen] = useState(false);
 
   const updateField = (
     field:
@@ -159,7 +167,18 @@ export function ItemForm({ initial, onSubmit, onCancel }: ItemFormProps) {
       </section>
 
       <section className="card space-y-4">
-        <h2 className="text-subsection-title font-semibold text-text-primary">Product Images</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-subsection-title font-semibold text-text-primary">
+            Product Images
+          </h2>
+          <button
+            type="button"
+            className="btn-secondary !px-3 !py-1.5 text-caption"
+            onClick={() => setIsCollageModalOpen(true)}
+          >
+            Create Collage
+          </button>
+        </div>
         <ImageDropzone
           images={item.images}
           previewIndex={item.previewImageIndex}
@@ -252,6 +271,23 @@ export function ItemForm({ initial, onSubmit, onCancel }: ItemFormProps) {
           Save Item
         </button>
       </div>
+
+      {isCollageModalOpen && (
+        <CollageBuilderModal
+          projectName={projectName}
+          itemName={item.name || "Item"}
+          onCancel={() => setIsCollageModalOpen(false)}
+          onConfirm={(imageUrl) => {
+            setItem((prev) => {
+              const images = [...prev.images, imageUrl];
+              const previewImageIndex =
+                images.length === 1 ? 0 : images.length - 1;
+              return { ...prev, images, previewImageIndex };
+            });
+            setIsCollageModalOpen(false);
+          }}
+        />
+      )}
     </form>
   );
 }

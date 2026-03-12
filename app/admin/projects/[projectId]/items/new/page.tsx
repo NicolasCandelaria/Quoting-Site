@@ -70,6 +70,7 @@ export default function NewItemPage() {
       <ItemForm
         onSubmit={handleSubmit}
         onCancel={() => router.push(`/admin/projects/${projectId}`)}
+        projectName={project.name}
       />
     </div>
   );
