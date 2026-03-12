@@ -293,7 +293,16 @@ export default function ClientItemPage() {
         )}
       </section>
 
-      {/* Legal copy is shown on the internal project page and final PDF, not on the client item view. */}
+      <p className="mt-2 text-caption leading-snug text-text-tertiary">
+        This quote sheet together with the ideas expressed therein are the Confidential and
+        Proprietary work of Billboard Worldwide Promotions Ltd. (&quot;Billboard&quot;) and is
+        delivered to the recipient for the sole and exclusive purpose of soliciting a PO, job, or
+        contract for work from the recipient. Billboard is the sole and exclusive copyright owner
+        of the images and/or ideas expressed in the Quote Sheet and the recipient will not copy or
+        alter the same, including removing Billboard&apos;s name or trademarks or adding the name
+        or trademarks of the recipient or any third party and the recipient will not present it as
+        the recipient&apos;s own or original work without Billboard&apos;s prior written consent.
+      </p>
     </div>
   );
 }

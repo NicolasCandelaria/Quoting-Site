@@ -130,18 +130,43 @@ export default function ClientProjectPage() {
         </section>
       )}
 
-      <p className="mt-6 text-caption leading-snug text-text-tertiary">
-        This quote sheet together with the ideas expressed therein are the
-        Confidential and Proprietary work of Billboard Worldwide Promotions Ltd.
-        (&quot;Billboard&quot;) and is delivered to the recipient for the sole and
-        exclusive purpose of soliciting a PO, job, or contract for work from the
-        recipient. Billboard is the sole and exclusive copyright owner of the
-        images and/or ideas expressed in the Quote Sheet and the recipient will
-        not copy or alter the same, including removing Billboard&apos;s name or
-        trademarks or adding the name or trademarks of the recipient or any
-        third party and the recipient will not present it as the recipient&apos;s own
-        or original work without Billboard&apos;s prior written consent.
-      </p>
+      <section className="card mt-4 space-y-3">
+        <h2 className="text-subsection-title font-semibold text-text-primary">
+          Artwork, Freight &amp; Terms
+        </h2>
+        <p className="text-caption leading-relaxed text-text-secondary">
+          Artwork: This quotation is contingent upon receiving the required artwork and a confirmed
+          purchase order. Any logo changes and/or additional artwork modifications may impact the
+          production timeline and incur additional costs. If the first pre-production sample
+          deviates from the original purchase order, the timeline will be affected, and new dates
+          will need to be confirmed. Additionally, creative and design services—including
+          artwork/logo development, modifications, design creation, and dye-line adjustments—are
+          subject to additional charges.
+        </p>
+        <p className="text-caption leading-relaxed text-text-secondary">
+          Custom pantone/color note: (substrate) Custom Pantone color will be matched as closely as
+          possible to the pantone number provided; however, a 100% match cannot always be
+          guaranteed due to substrate limitations.
+        </p>
+        <p className="text-caption leading-relaxed text-text-secondary">
+          Freight: Air freight quotes remain valid for 7 days from the date issued and are subject
+          to change based on space availability. Freight charges and pricing are subject to
+          fluctuations, such as fuel price adjustments. Prices do not include TAX/VAT. Due to the
+          fluctuating freight cost all quotes for ocean and air transit will be updated at the time
+          your goods are ready, and a sailing/booking is confirmed. Government implemented
+          electricity cuts/shutdowns may occur at our overseas factories without notice and may
+          cause production delays.
+        </p>
+        <p className="text-caption leading-relaxed text-text-secondary">
+          Please be advised that pricing may vary based on fluctuating tariff rates.
+        </p>
+        <p className="text-caption leading-relaxed text-text-secondary">
+          Timelines to be confirmed upon receipt of PO as CNY can affect timeline/production time.
+          Pre-production samples must be developed and approved prior to the order date to ensure
+          timely delivery. Quotations are valid for 15 days. Lead times will be confirmed upon
+          receipt of sign-off.
+        </p>
+      </section>
     </div>
   );
 }
