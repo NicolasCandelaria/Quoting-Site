@@ -7,7 +7,7 @@ import {
   BarChart3,
   LayoutGrid,
   Calculator,
-  ImageCheck,
+  Image,
   TrendingUp,
   ClipboardList,
 } from "lucide-react";

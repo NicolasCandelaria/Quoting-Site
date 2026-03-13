@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Project } from "@/lib/models";
 import { fetchProjects } from "@/lib/api";
-import { Home, LayoutDashboard, Calculator, ImageCheck, BarChart3, ClipboardList } from "lucide-react";
+import { Home, LayoutDashboard, Calculator, Image, BarChart3, ClipboardList } from "lucide-react";
 
 export function AdminSidebar() {
   const router = useRouter();
@@ -103,7 +103,7 @@ export function AdminSidebar() {
                 : "text-[#c8c4e8] hover:bg-white/10 hover:text-white"
             }`}
           >
-            <ImageCheck className="h-5 w-5 shrink-0" />
+            <Image className="h-5 w-5 shrink-0" />
             Art Approvals
           </Link>
           <Link

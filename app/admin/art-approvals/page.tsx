@@ -1,6 +1,6 @@
 "use client";
 
-import { ImageCheck, CheckCircle, MessageSquare, History } from "lucide-react";
+import { Image, CheckCircle, MessageSquare, History } from "lucide-react";
 import { ComingSoonFeaturePage } from "@/components/ComingSoonFeaturePage";
 
 export default function ArtApprovalsPage() {
