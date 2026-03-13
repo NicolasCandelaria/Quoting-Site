@@ -57,7 +57,7 @@ export function AdminSidebar() {
         <div className="px-3">
           <Link href="/" className="inline-flex items-center gap-2" aria-label="Quote Sheet">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/logo.png" alt="Quote Sheet" className="h-7 w-auto" />
+            <img src="/images/logo.png" alt="Quote Sheet" className="h-14 w-auto" />
           </Link>
         </div>
 
