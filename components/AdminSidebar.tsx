@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Project } from "@/lib/models";
 import { fetchProjects } from "@/lib/api";
-import { Home, LayoutDashboard } from "lucide-react";
+import { Home, LayoutDashboard, Calculator, ImageCheck, BarChart3, ClipboardList } from "lucide-react";
 
 export function AdminSidebar() {
   const router = useRouter();
@@ -76,13 +76,57 @@ export function AdminSidebar() {
           <Link
             href="/admin"
             className={`flex h-10 items-center gap-2 rounded-lg px-3 text-body font-medium transition-colors ${
-              pathname.startsWith("/admin")
+              pathname === "/admin"
                 ? "bg-white/20 text-white"
                 : "text-[#c8c4e8] hover:bg-white/10 hover:text-white"
             }`}
           >
             <LayoutDashboard className="h-5 w-5 shrink-0" />
             Admin
+          </Link>
+          <Link
+            href="/admin/quick-profit-calculator"
+            className={`flex h-10 items-center gap-2 rounded-lg px-3 text-body font-medium transition-colors ${
+              pathname === "/admin/quick-profit-calculator"
+                ? "bg-white/20 text-white"
+                : "text-[#c8c4e8] hover:bg-white/10 hover:text-white"
+            }`}
+          >
+            <Calculator className="h-5 w-5 shrink-0" />
+            Quick Profit Calculator
+          </Link>
+          <Link
+            href="/admin/art-approvals"
+            className={`flex h-10 items-center gap-2 rounded-lg px-3 text-body font-medium transition-colors ${
+              pathname === "/admin/art-approvals"
+                ? "bg-white/20 text-white"
+                : "text-[#c8c4e8] hover:bg-white/10 hover:text-white"
+            }`}
+          >
+            <ImageCheck className="h-5 w-5 shrink-0" />
+            Art Approvals
+          </Link>
+          <Link
+            href="/admin/item-performance-analytics"
+            className={`flex h-10 items-center gap-2 rounded-lg px-3 text-body font-medium transition-colors ${
+              pathname === "/admin/item-performance-analytics"
+                ? "bg-white/20 text-white"
+                : "text-[#c8c4e8] hover:bg-white/10 hover:text-white"
+            }`}
+          >
+            <BarChart3 className="h-5 w-5 shrink-0" />
+            Item Performance Analytics
+          </Link>
+          <Link
+            href="/admin/rfp-dashboard"
+            className={`flex h-10 items-center gap-2 rounded-lg px-3 text-body font-medium transition-colors ${
+              pathname === "/admin/rfp-dashboard"
+                ? "bg-white/20 text-white"
+                : "text-[#c8c4e8] hover:bg-white/10 hover:text-white"
+            }`}
+          >
+            <ClipboardList className="h-5 w-5 shrink-0" />
+            RFP Dashboard
           </Link>
         </nav>
 
