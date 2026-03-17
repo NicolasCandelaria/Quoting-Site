@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { deleteItemInSupabase, isSupabaseConfigured, upsertItemInSupabase } from "@/lib/server/supabase";
+import { getSessionUser } from "@/lib/server/auth";
 import type { Item } from "@/lib/models";
 
 export async function PUT(
@@ -11,6 +12,11 @@ export async function PUT(
       { error: "Supabase is not configured." },
       { status: 500 },
     );
+  }
+
+  const user = await getSessionUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
   const { projectId, itemId } = await context.params;
@@ -44,6 +50,11 @@ export async function DELETE(
       { error: "Supabase is not configured." },
       { status: 500 },
     );
+  }
+
+  const user = await getSessionUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
   const { projectId, itemId } = await context.params;

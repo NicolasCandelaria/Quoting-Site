@@ -5,6 +5,7 @@ import {
   isSupabaseConfigured,
   saveProjectInSupabase,
 } from "@/lib/server/supabase";
+import { getSessionUser } from "@/lib/server/auth";
 import type { Project } from "@/lib/models";
 
 export async function GET(
@@ -43,6 +44,11 @@ export async function POST(
     );
   }
 
+  const user = await getSessionUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
   const { projectId } = await context.params;
   const payload = (await request.json()) as { project?: Project };
 
@@ -71,6 +77,11 @@ export async function DELETE(
       { error: "Supabase is not configured." },
       { status: 500 },
     );
+  }
+
+  const user = await getSessionUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
   const { projectId } = await context.params;

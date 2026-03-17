@@ -14,6 +14,7 @@ type SupabaseRowProject = {
   pricing_basis?: string | null;
   contact_name?: string | null;
   quote_date?: string | null;
+  created_by?: string | null;
 };
 
 type SupabaseRowItem = {
@@ -151,6 +152,7 @@ function toProject(row: SupabaseRowProject, items: Item[]): Project {
     pricingBasis,
     contactName: row.contact_name ?? undefined,
     quoteDate: row.quote_date ?? undefined,
+    createdBy: row.created_by ?? undefined,
     items,
   };
 }
@@ -266,6 +268,7 @@ async function listItemsFromSupabase(projectId?: string) {
 
 export async function listProjectsFromSupabase(): Promise<Project[]> {
   const queries = [
+    "/projects?select=id,name,client,notes,created_at,pricing_basis,contact_name,quote_date,created_by&order=created_at.desc",
     "/projects?select=id,name,client,notes,created_at,pricing_basis,contact_name,quote_date&order=created_at.desc",
     "/projects?select=id,name,client,notes,created_at,pricing_basis,contact_name&order=created_at.desc",
     "/projects?select=id,name,client,notes,created_at&order=created_at.desc",
@@ -308,6 +311,7 @@ export async function getProjectFromSupabase(
   projectId: string,
 ): Promise<Project | undefined> {
   const queries = [
+    `/projects?select=id,name,client,notes,created_at,pricing_basis,contact_name,quote_date,created_by&id=eq.${projectId}&limit=1`,
     `/projects?select=id,name,client,notes,created_at,pricing_basis,contact_name,quote_date&id=eq.${projectId}&limit=1`,
     `/projects?select=id,name,client,notes,created_at,pricing_basis,contact_name&id=eq.${projectId}&limit=1`,
     `/projects?select=id,name,client,notes,created_at&id=eq.${projectId}&limit=1`,
@@ -349,11 +353,26 @@ export async function createProjectInSupabase(input: {
   pricingBasis?: "DDP" | "FOB";
   contactName?: string;
   quoteDate?: string;
+  createdBy?: string;
 }): Promise<Project> {
   const rowsCandidates: {
     path: string;
     body: unknown[];
   }[] = [
+    {
+      path: "/projects?select=id,name,client,notes,created_at,pricing_basis,contact_name,quote_date,created_by",
+      body: [
+        {
+          name: input.name,
+          client: input.client,
+          notes: input.notes ?? null,
+          pricing_basis: input.pricingBasis ?? "DDP",
+          contact_name: input.contactName ?? null,
+          quote_date: input.quoteDate ?? null,
+          created_by: input.createdBy ?? null,
+        },
+      ],
+    },
     {
       path: "/projects?select=id,name,client,notes,created_at,pricing_basis,contact_name,quote_date",
       body: [
@@ -425,6 +444,20 @@ export async function saveProjectInSupabase(project: Project): Promise<Project> 
     path: string;
     body: Record<string, unknown>;
   }[] = [
+    {
+      path:
+        "/projects?id=eq." +
+        project.id +
+        "&select=id,name,client,notes,created_at,pricing_basis,contact_name,quote_date,created_by",
+      body: {
+        name: project.name,
+        client: project.client,
+        notes: project.notes ?? null,
+        pricing_basis: project.pricingBasis ?? "DDP",
+        contact_name: project.contactName ?? null,
+        quote_date: project.quoteDate ?? null,
+      },
+    },
     {
       path:
         "/projects?id=eq." +
