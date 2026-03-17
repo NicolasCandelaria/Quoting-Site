@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import type { Project } from "@/lib/models";
 import { fetchProjects } from "@/lib/api";
 import { createClient } from "@/lib/supabase/client";
-import { Home, LayoutDashboard, Calculator, Image, BarChart3, ClipboardList, LogOut } from "lucide-react";
+import { Home, Calculator, Image, BarChart3, ClipboardList, LogOut } from "lucide-react";
 
 type AdminSidebarProps = {
   /**
@@ -66,24 +66,13 @@ export function AdminSidebar({ open = true }: AdminSidebarProps) {
       />
       <div className="relative z-10 flex h-full flex-col gap-4 pt-6">
         <div className="px-3">
-          <Link href="/" className="inline-flex items-center gap-2" aria-label="Quote Sheet">
+          <Link href="/admin" className="inline-flex items-center gap-2" aria-label="Quote Sheet">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/images/logo.png" alt="Quote Sheet" className="h-14 w-auto" />
           </Link>
         </div>
 
         <nav className="flex flex-col gap-0.5 px-3">
-          <Link
-            href="/"
-            className={`flex h-10 items-center gap-2 rounded-lg px-3 text-body font-medium transition-colors ${
-              pathname === "/"
-                ? "bg-white/20 text-white"
-                : "text-[#c8c4e8] hover:bg-white/10 hover:text-white"
-            }`}
-          >
-            <Home className="h-5 w-5 shrink-0" />
-            Home
-          </Link>
           <Link
             href="/admin"
             className={`flex h-10 items-center gap-2 rounded-lg px-3 text-body font-medium transition-colors ${
@@ -92,8 +81,8 @@ export function AdminSidebar({ open = true }: AdminSidebarProps) {
                 : "text-[#c8c4e8] hover:bg-white/10 hover:text-white"
             }`}
           >
-            <LayoutDashboard className="h-5 w-5 shrink-0" />
-            Admin
+            <Home className="h-5 w-5 shrink-0" />
+            Home
           </Link>
           <Link
             href="/admin/quick-profit-calculator"
