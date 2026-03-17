@@ -1,100 +1,57 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/middleware";
 
-function unauthorizedResponse(message?: string) {
-  return new NextResponse(
-    message ?? "Authentication required for admin access.",
-    {
-      status: 401,
-      headers: {
-        "WWW-Authenticate": 'Basic realm="Admin", charset="UTF-8"',
-      },
-    },
-  );
-}
-
-function normalizeEnv(value?: string) {
-  if (!value) return "";
-  const trimmed = value.trim();
-
-  if (
-    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-    (trimmed.startsWith("'") && trimmed.endsWith("'"))
-  ) {
-    return trimmed.slice(1, -1).trim();
-  }
-
-  return trimmed;
-}
-
-function getAdminCredentials() {
-  // Primary expected keys.
-  const username = normalizeEnv(process.env.ADMIN_BASIC_AUTH_USERNAME);
-  const password = normalizeEnv(process.env.ADMIN_BASIC_AUTH_PASSWORD);
-
-  if (username && password) {
-    return { username, password };
-  }
-
-  // Fallback keys to tolerate common dashboard naming mistakes.
-  const fallbackUsername = normalizeEnv(process.env.ADMIN_USERNAME);
-  const fallbackPassword = normalizeEnv(process.env.ADMIN_PASSWORD);
-
-  return {
-    username: username || fallbackUsername,
-    password: password || fallbackPassword,
-  };
-}
-
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (!pathname.startsWith("/admin")) {
     return NextResponse.next();
   }
 
-  const { username, password } = getAdminCredentials();
-
-  if (!username || !password) {
-    if (process.env.NODE_ENV !== "production") {
-      return NextResponse.next();
-    }
-
-    return unauthorizedResponse(
-      "Admin auth is configured incorrectly. Set ADMIN_BASIC_AUTH_USERNAME and ADMIN_BASIC_AUTH_PASSWORD (or ADMIN_USERNAME / ADMIN_PASSWORD) in Vercel env vars, then redeploy.",
-    );
+  if (pathname === "/admin/login") {
+    return NextResponse.next();
   }
 
-  const authHeader = request.headers.get("authorization");
-
-  if (!authHeader?.startsWith("Basic ")) {
-    return unauthorizedResponse();
-  }
-
-  const base64Credentials = authHeader.slice(6);
-
-  let decodedCredentials = "";
+  const url = request.nextUrl.clone();
+  const loginUrl = `${url.origin}/admin/login`;
+  const loginWithNext = `${loginUrl}?next=${encodeURIComponent(pathname)}`;
 
   try {
-    decodedCredentials = atob(base64Credentials);
+    const { supabase, response } = await createClient(request);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      const redirect = NextResponse.redirect(loginWithNext);
+      response.cookies.getAll().forEach((cookie) =>
+        redirect.cookies.set(cookie.name, cookie.value)
+      );
+      return redirect;
+    }
+
+    const checkUrl = new URL("/api/auth/check-approved", url.origin);
+    const checkRes = await fetch(checkUrl.toString(), {
+      headers: {
+        Cookie: request.headers.get("Cookie") ?? "",
+      },
+    });
+
+    if (!checkRes.ok) {
+      const redirect = NextResponse.redirect(
+        `${loginUrl}?error=not-approved&next=${encodeURIComponent(pathname)}`
+      );
+      response.cookies.getAll().forEach((cookie) =>
+        redirect.cookies.set(cookie.name, cookie.value)
+      );
+      return redirect;
+    }
+
+    return response;
   } catch {
-    return unauthorizedResponse();
+    return NextResponse.redirect(loginWithNext);
   }
-
-  const separatorIndex = decodedCredentials.indexOf(":");
-
-  if (separatorIndex === -1) {
-    return unauthorizedResponse();
-  }
-
-  const inputUsername = decodedCredentials.slice(0, separatorIndex);
-  const inputPassword = decodedCredentials.slice(separatorIndex + 1);
-
-  if (inputUsername !== username || inputPassword !== password) {
-    return unauthorizedResponse();
-  }
-
-  return NextResponse.next();
 }
 
 export const config = {

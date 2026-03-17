@@ -4,6 +4,7 @@ import {
   isSupabaseConfigured,
   listProjectsFromSupabase,
 } from "@/lib/server/supabase";
+import { getSessionUser } from "@/lib/server/auth";
 
 export async function GET() {
   if (!isSupabaseConfigured()) {
@@ -11,6 +12,11 @@ export async function GET() {
       { error: "Supabase is not configured." },
       { status: 500 },
     );
+  }
+
+  const user = await getSessionUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
   try {
@@ -28,6 +34,11 @@ export async function POST(request: Request) {
       { error: "Supabase is not configured." },
       { status: 500 },
     );
+  }
+
+  const user = await getSessionUser();
+  if (!user?.email) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
   const payload = (await request.json()) as {
@@ -56,6 +67,7 @@ export async function POST(request: Request) {
       pricingBasis,
       contactName: payload.contactName?.trim() || undefined,
       quoteDate: payload.quoteDate?.trim() || undefined,
+      createdBy: user.email,
     });
     return NextResponse.json({ project }, { status: 201 });
   } catch (error) {

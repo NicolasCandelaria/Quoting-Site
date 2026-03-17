@@ -64,3 +64,12 @@ alter table public.items
 
 alter table public.items
   add column if not exists additional_notes text default '';
+
+-- Approved account managers (allowlist for magic-link auth)
+create table if not exists public.approved_account_managers (
+  email text primary key
+);
+
+-- Creator attribution for projects
+alter table public.projects
+  add column if not exists created_by text;

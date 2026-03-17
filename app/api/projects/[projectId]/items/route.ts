@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isSupabaseConfigured, upsertItemInSupabase } from "@/lib/server/supabase";
+import { getSessionUser } from "@/lib/server/auth";
 import type { Item } from "@/lib/models";
 
 export async function POST(
@@ -11,6 +12,11 @@ export async function POST(
       { error: "Supabase is not configured." },
       { status: 500 },
     );
+  }
+
+  const user = await getSessionUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
   const { projectId } = await context.params;

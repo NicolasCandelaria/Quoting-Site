@@ -99,6 +99,12 @@ export default function AdminHomePage() {
                         {project.client}
                       </span>
                     </p>
+                    <p className="mt-0.5 text-caption text-text-secondary">
+                      Created by:{" "}
+                      <span className="font-medium text-text-primary">
+                        {project.createdBy ?? "—"}
+                      </span>
+                    </p>
                   </div>
                   <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-caption font-medium text-slate-700">
                     {project.items.length} item{project.items.length === 1 ? "" : "s"}

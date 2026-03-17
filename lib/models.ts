@@ -43,6 +43,8 @@ export type Project = {
    * Shown in header, on client views, and in PDFs.
    */
   quoteDate?: string;
+  /** Email of the account manager who created the project. */
+  createdBy?: string;
   items: Item[];
 };
 

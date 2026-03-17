@@ -195,6 +195,12 @@ export default function ProjectDetailPage() {
           <p className="text-body text-text-secondary">
             Client: <span className="font-medium text-text-primary">{project.client}</span>
           </p>
+          <p className="text-body text-text-secondary">
+            Created by:{" "}
+            <span className="font-medium text-text-primary">
+              {project.createdBy ?? "—"}
+            </span>
+          </p>
           {(quoteDateLabel || createdLabel || project.contactName) && (
             <p className="text-caption text-text-secondary">
               {quoteDateLabel && (
