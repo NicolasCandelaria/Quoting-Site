@@ -118,7 +118,8 @@ export async function exportProjectPdf(project: Project) {
   // Logo: load from same-origin (browser only)
   let logoImage: { ref: any; width: number; height: number } | null = null;
   if (typeof window !== "undefined") {
-    const logoUrl = `${window.location.origin}/images/logo.png`;
+    // Prefer the Billboard black logo added to /public/images.
+    const logoUrl = `${window.location.origin}/images/Billboard logo black.png`;
     const logoBytes = await getImageBytes(logoUrl);
     if (logoBytes && logoBytes.length > 0) {
       try {
@@ -150,9 +151,30 @@ export async function exportProjectPdf(project: Project) {
   }
 
   function drawFooterLegal(page: any) {
+    // Billboard contact info (shown on item pages only, not on the final legal page).
+    const contactLines = ["www.billboardworldwide.com", "778-571-8898"];
+    const contactFontSize = 8;
+    const contactColor = rgb(0.35, 0.35, 0.38);
+    const contactGap = 10;
+
     const lines = wrapText(ITEM_PAGE_LEGAL, font, 6, pageWidth - margin * 2);
     const lineHeight = 6.5;
     const topY = contentMinY - 4;
+
+    // Draw contact info slightly above the legal paragraph, right-aligned.
+    let contactY = topY + 6;
+    for (const line of contactLines) {
+      const w = font.widthOfTextAtSize(line, contactFontSize);
+      page.drawText(line, {
+        x: pageWidth - margin - w,
+        y: contactY,
+        size: contactFontSize,
+        font,
+        color: contactColor,
+      });
+      contactY -= contactFontSize + 2;
+    }
+
     lines.forEach((line, i) => {
       const y = topY - (i + 1) * lineHeight;
       if (y >= margin) {
