@@ -155,18 +155,17 @@ export async function exportProjectPdf(project: Project) {
     const contactLines = ["www.billboardworldwide.com", "778-571-8898"];
     const contactFontSize = 8;
     const contactColor = rgb(0.35, 0.35, 0.38);
-    const contactGap = 10;
 
     const lines = wrapText(ITEM_PAGE_LEGAL, font, 6, pageWidth - margin * 2);
     const lineHeight = 6.5;
     const topY = contentMinY - 4;
 
-    // Draw contact info slightly above the legal paragraph, right-aligned.
-    let contactY = topY + 6;
+    // Draw contact info left-aligned, above the legal paragraph with clear gap.
+    const contactGapAboveLegal = 18;
+    let contactY = topY + contactGapAboveLegal;
     for (const line of contactLines) {
-      const w = font.widthOfTextAtSize(line, contactFontSize);
       page.drawText(line, {
-        x: pageWidth - margin - w,
+        x: margin,
         y: contactY,
         size: contactFontSize,
         font,
