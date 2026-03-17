@@ -209,8 +209,9 @@ export function ItemForm({
                   <label className="label text-xs">Qty</label>
                   <input
                     type="number"
-                    className="input"
-                    value={tier.qty}
+                    className="input placeholder:text-slate-400"
+                    value={tier.qty || ""}
+                    placeholder="100"
                     min={0}
                     onChange={(e) =>
                       updatePriceTier(index, {
@@ -224,8 +225,9 @@ export function ItemForm({
                   <input
                     type="number"
                     step="0.01"
-                    className="input"
-                    value={tier.pricePerUnitDDP}
+                    className="input placeholder:text-slate-400"
+                    value={tier.pricePerUnitDDP || ""}
+                    placeholder="10.00"
                     min={0}
                     onChange={(e) =>
                       updatePriceTier(index, {
@@ -237,8 +239,9 @@ export function ItemForm({
                 <div>
                   <label className="label text-xs">Production + Transit Time</label>
                   <input
-                    className="input"
+                    className="input placeholder:text-slate-400"
                     value={tier.productionPlusTransitTime}
+                    placeholder="40-45 days from sample approval + 50-60 days ocean transit"
                     onChange={(e) =>
                       updatePriceTier(index, {
                         productionPlusTransitTime: e.target.value,

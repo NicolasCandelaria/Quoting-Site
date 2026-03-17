@@ -24,9 +24,7 @@ export default function HomePage() {
           sheets.
         </p>
         <div>
-          <Link href="/admin" className="btn-primary">
-            Open Admin
-          </Link>
+          <Link href="/login" className="btn-primary">Open Admin</Link>
         </div>
       </section>
     </div>

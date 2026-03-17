@@ -12,12 +12,12 @@ export async function GET(request: Request) {
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (error) {
         return NextResponse.redirect(
-          `${requestUrl.origin}/admin/login?error=${encodeURIComponent(error.message)}`
+          `${requestUrl.origin}/login?error=${encodeURIComponent(error.message)}`
         );
       }
     } catch {
       return NextResponse.redirect(
-        `${requestUrl.origin}/admin/login?error=callback_failed`
+        `${requestUrl.origin}/login?error=callback_failed`
       );
     }
   }

@@ -8,7 +8,15 @@ import { fetchProjects } from "@/lib/api";
 import { createClient } from "@/lib/supabase/client";
 import { Home, LayoutDashboard, Calculator, Image, BarChart3, ClipboardList, LogOut } from "lucide-react";
 
-export function AdminSidebar() {
+type AdminSidebarProps = {
+  /**
+   * Controls the slide-in visibility on mobile. On desktop, the sidebar is
+   * always visible regardless of this value.
+   */
+  open?: boolean;
+};
+
+export function AdminSidebar({ open = true }: AdminSidebarProps) {
   const router = useRouter();
   const pathname = usePathname() ?? "/";
   const [projects, setProjects] = useState<Project[]>([]);
@@ -40,7 +48,9 @@ export function AdminSidebar() {
 
   return (
     <aside
-      className="fixed left-0 top-0 z-40 h-screen w-[240px] shrink-0 border-r border-[#16124a] shadow-sm"
+      className={`fixed left-0 top-0 z-40 h-screen w-[240px] shrink-0 border-r border-[#16124a] shadow-sm transition-transform duration-300 md:translate-x-0 ${
+        open ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+      }`}
       style={{ backgroundColor: "#1e195b" }}
     >
       <div
@@ -153,7 +163,7 @@ export function AdminSidebar() {
             onClick={async () => {
               const supabase = createClient();
               await supabase.auth.signOut();
-              router.push("/admin/login");
+              router.push("/login");
               router.refresh();
             }}
             className="flex h-10 w-full items-center gap-2 rounded-lg px-3 text-body font-medium text-[#c8c4e8] transition-colors hover:bg-white/10 hover:text-white"

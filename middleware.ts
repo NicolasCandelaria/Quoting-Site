@@ -9,12 +9,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (pathname === "/admin/login") {
-    return NextResponse.next();
-  }
-
   const url = request.nextUrl.clone();
-  const loginUrl = `${url.origin}/admin/login`;
+  const loginUrl = `${url.origin}/login`;
   const loginWithNext = `${loginUrl}?next=${encodeURIComponent(pathname)}`;
 
   try {
