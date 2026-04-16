@@ -20,6 +20,8 @@ type PersistedForm = {
   costCurrency: Currency;
   quoteCurrency: Currency;
   usdCadRateStr: string;
+  /** Default true when missing (preserve prior behavior). */
+  applyFxConversion: boolean;
 };
 
 function isCurrency(v: unknown): v is Currency {
@@ -37,6 +39,8 @@ function parsePersisted(raw: string): Partial<PersistedForm> | null {
     if (isCurrency(p.costCurrency)) out.costCurrency = p.costCurrency;
     if (isCurrency(p.quoteCurrency)) out.quoteCurrency = p.quoteCurrency;
     if (typeof p.usdCadRateStr === "string") out.usdCadRateStr = p.usdCadRateStr;
+    if (typeof p.applyFxConversion === "boolean")
+      out.applyFxConversion = p.applyFxConversion;
     return Object.keys(out).length > 0 ? out : null;
   } catch {
     return null;
@@ -80,6 +84,8 @@ export default function QuickProfitCalculatorPage() {
   const [usdCadRateStr, setUsdCadRateStr] = useState(
     String(DEFAULT_USD_CAD_RATE),
   );
+  /** When false, all amounts stay in cost currency (no FX). Default true for returning users. */
+  const [applyFxConversion, setApplyFxConversion] = useState(true);
   const [copied, setCopied] = useState<"price" | "summary" | null>(null);
   const [storageReady, setStorageReady] = useState(false);
 
@@ -96,6 +102,8 @@ export default function QuickProfitCalculatorPage() {
           if (p.costCurrency !== undefined) setCostCurrency(p.costCurrency);
           if (p.quoteCurrency !== undefined) setQuoteCurrency(p.quoteCurrency);
           if (p.usdCadRateStr !== undefined) setUsdCadRateStr(p.usdCadRateStr);
+          if (p.applyFxConversion !== undefined)
+            setApplyFxConversion(p.applyFxConversion);
         }
       }
     } catch {
@@ -116,6 +124,7 @@ export default function QuickProfitCalculatorPage() {
         costCurrency,
         quoteCurrency,
         usdCadRateStr,
+        applyFxConversion,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch {
@@ -130,9 +139,11 @@ export default function QuickProfitCalculatorPage() {
     costCurrency,
     quoteCurrency,
     usdCadRateStr,
+    applyFxConversion,
   ]);
 
-  const fxNeeded = costCurrency !== quoteCurrency;
+  const fxNeededUi =
+    applyFxConversion && costCurrency !== quoteCurrency;
 
   const result: MemoResult = useMemo(() => {
     const quantity = parsePositiveQty(quantityStr);
@@ -149,7 +160,7 @@ export default function QuickProfitCalculatorPage() {
     ) {
       return { kind: "parse" as const };
     }
-    if (fxNeeded && usdCadRate === null) {
+    if (fxNeededUi && usdCadRate === null) {
       return { kind: "parse" as const };
     }
 
@@ -159,8 +170,9 @@ export default function QuickProfitCalculatorPage() {
       sampleInspectionTotal,
       costCurrency,
       quoteCurrency,
-      usdCadRate: fxNeeded ? (usdCadRate ?? DEFAULT_USD_CAD_RATE) : 1.41,
+      usdCadRate: fxNeededUi ? (usdCadRate ?? DEFAULT_USD_CAD_RATE) : 1.41,
       markupPercent,
+      applyFxConversion,
     });
   }, [
     quantityStr,
@@ -170,14 +182,20 @@ export default function QuickProfitCalculatorPage() {
     costCurrency,
     quoteCurrency,
     usdCadRateStr,
-    fxNeeded,
+    fxNeededUi,
+    applyFxConversion,
   ]);
+
+  const pricingCurrency: Currency =
+    !isParseResult(result) && result.ok && result.breakdown.fxApplied
+      ? quoteCurrency
+      : costCurrency;
 
   const copyPrice = async () => {
     if (isParseResult(result) || !result.ok) return;
     const text = formatMoney(
       result.breakdown.sellPricePerUnitQuoteCurrency,
-      quoteCurrency,
+      pricingCurrency,
     );
     await navigator.clipboard.writeText(text);
     setCopied("price");
@@ -189,15 +207,18 @@ export default function QuickProfitCalculatorPage() {
     const b = result.breakdown;
     const lines = [
       `Sample/inspection per unit (${costCurrency}): ${formatMoney(b.samplePerUnitCostCurrency, costCurrency)}`,
-      `Combined per unit before FX (${costCurrency}): ${formatMoney(b.combinedPerUnitCostCurrency, costCurrency)}`,
+      `Extended cost per unit (${costCurrency}): ${formatMoney(b.combinedPerUnitCostCurrency, costCurrency)}`,
     ];
     if (b.fxApplied) {
       lines.push(
-        `Combined per unit after FX (${quoteCurrency}): ${formatMoney(b.combinedPerUnitQuoteCurrency, quoteCurrency)}`,
+        `Combined after FX (${quoteCurrency}): ${formatMoney(b.combinedPerUnitQuoteCurrency, quoteCurrency)}`,
       );
     }
     lines.push(
-      `Sell price per unit (${quoteCurrency}): ${formatMoney(b.sellPricePerUnitQuoteCurrency, quoteCurrency)}`,
+      `Sell price per unit (${pricingCurrency}): ${formatMoney(b.sellPricePerUnitQuoteCurrency, pricingCurrency)}`,
+      `Profit per unit (${pricingCurrency}): ${formatMoney(b.profitPerUnitQuoteCurrency, pricingCurrency)}`,
+      `Client PO amount (${pricingCurrency}): ${formatMoney(b.clientPoAmountQuoteCurrency, pricingCurrency)}`,
+      `PO profit (${pricingCurrency}): ${formatMoney(b.poProfitQuoteCurrency, pricingCurrency)}`,
     );
     await navigator.clipboard.writeText(lines.join("\n"));
     setCopied("summary");
@@ -209,72 +230,47 @@ export default function QuickProfitCalculatorPage() {
   const showErrors =
     !isParseResult(result) && !result.ok ? result.errors : null;
 
+  const thCost =
+    "border border-slate-200 bg-slate-50/90 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-secondary";
+  const thPrice =
+    "border border-slate-200 bg-slate-50/70 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-secondary";
+  const td =
+    "border border-slate-200 px-2 py-2 align-middle bg-white/90 min-w-[7.5rem]";
+  const tdDivider =
+    "border border-slate-200 border-r-4 border-r-slate-800 px-2 py-2 align-middle bg-slate-50/50 min-w-[7.5rem]";
+  const tdReadonly =
+    "border border-slate-200 px-3 py-2 align-middle tabular-nums text-body text-text-primary bg-slate-50/40";
+
   return (
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-1">
         <h1 className="text-page-title font-semibold text-text-primary">
           Quick Profit Calculator
         </h1>
-        <p className="text-body text-text-secondary max-w-2xl">
-          Amortize sample/inspection into unit cost, convert between USD and CAD
-          when needed, then apply markup on the per-unit amount in the quote
-          currency. Your inputs and rate are saved in this browser (local
-          storage).
+        <p className="text-body text-text-secondary max-w-3xl">
+          Work like a quote sheet row: build extended cost, then sell price and
+          PO totals. Toggle conversion off when everything is quoted in one
+          currency (e.g. USD only). Values are saved in this browser.
         </p>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-        <form
-          className="card space-y-4 max-w-2xl"
-          onSubmit={(e) => e.preventDefault()}
-        >
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="label">Quantity (for amortization)</label>
-              <input
-                type="number"
-                min={0}
-                step="any"
-                className="input placeholder:text-slate-400"
-                value={quantityStr}
-                onChange={(e) => setQuantityStr(e.target.value)}
-                placeholder="400"
-              />
-            </div>
-            <div>
-              <label className="label">Unit cost ({costCurrency})</label>
-              <input
-                type="number"
-                min={0}
-                step="0.01"
-                className="input placeholder:text-slate-400"
-                value={unitCostStr}
-                onChange={(e) => setUnitCostStr(e.target.value)}
-                placeholder="1.00"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="label">
-              Sample / inspection total ({costCurrency})
-            </label>
+      <div className="card space-y-4">
+        <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:flex-wrap lg:items-end lg:justify-between">
+          <label className="inline-flex cursor-pointer items-center gap-2 text-body text-text-primary">
             <input
-              type="number"
-              min={0}
-              step="0.01"
-              className="input placeholder:text-slate-400"
-              value={sampleStr}
-              onChange={(e) => setSampleStr(e.target.value)}
-              placeholder="400.00"
+              type="checkbox"
+              className="h-4 w-4 rounded border-slate-300 text-[#24186e] focus:ring-[#24186e]"
+              checked={applyFxConversion}
+              onChange={(e) => setApplyFxConversion(e.target.checked)}
             />
-          </div>
+            <span>Apply USD/CAD conversion</span>
+          </label>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-wrap items-end gap-4">
             <div>
               <label className="label">Cost currency</label>
               <select
-                className="input h-10"
+                className="input h-10 min-w-[8rem]"
                 value={costCurrency}
                 onChange={(e) =>
                   setCostCurrency(e.target.value === "CAD" ? "CAD" : "USD")
@@ -284,149 +280,212 @@ export default function QuickProfitCalculatorPage() {
                 <option value="CAD">CAD</option>
               </select>
             </div>
-            <div>
-              <label className="label">Quote currency</label>
-              <select
-                className="input h-10"
-                value={quoteCurrency}
-                onChange={(e) =>
-                  setQuoteCurrency(e.target.value === "CAD" ? "CAD" : "USD")
-                }
-              >
-                <option value="USD">USD</option>
-                <option value="CAD">CAD</option>
-              </select>
-            </div>
-          </div>
-
-          {fxNeeded && (
-            <div>
-              <label className="label">1 USD = [ ] CAD</label>
-              <input
-                type="number"
-                min={0}
-                step="0.0001"
-                className="input placeholder:text-slate-400"
-                value={usdCadRateStr}
-                onChange={(e) => setUsdCadRateStr(e.target.value)}
-                placeholder={String(DEFAULT_USD_CAD_RATE)}
-              />
-              <p className="mt-1 text-caption text-text-secondary">
-                Editable rate; defaults to {DEFAULT_USD_CAD_RATE} for typical
-                USD→CAD work.
-              </p>
-            </div>
-          )}
-
-          <div>
-            <label className="label">Markup (%)</label>
-            <input
-              type="number"
-              min={0}
-              step="0.1"
-              className="input placeholder:text-slate-400"
-              value={markupStr}
-              onChange={(e) => setMarkupStr(e.target.value)}
-              placeholder="20"
-            />
-          </div>
-        </form>
-
-        <div className="card space-y-4 h-fit">
-          <h2 className="text-lg font-semibold text-text-primary">Result</h2>
-
-          {isParseResult(result) && (
-            <p className="text-body text-text-secondary">
-              Enter valid numbers in all fields
-              {fxNeeded ? " (including the exchange rate)" : ""} to see the
-              breakdown.
-            </p>
-          )}
-
-          {showErrors && (
-            <ul className="list-inside list-disc space-y-1 text-body text-status-error">
-              {showErrors.map((err) => (
-                <li key={err}>{err}</li>
-              ))}
-            </ul>
-          )}
-
-          {showBreakdown && (
-            <>
-              <dl className="space-y-3 text-body">
-                <div className="flex justify-between gap-4 border-b border-slate-100 pb-2">
-                  <dt className="text-text-secondary">
-                    Sample/inspection per unit
-                  </dt>
-                  <dd className="font-medium text-text-primary tabular-nums">
-                    {formatMoney(
-                      showBreakdown.samplePerUnitCostCurrency,
-                      costCurrency,
-                    )}
-                  </dd>
-                </div>
-                <div className="flex justify-between gap-4 border-b border-slate-100 pb-2">
-                  <dt className="text-text-secondary">
-                    Combined per unit (before FX)
-                  </dt>
-                  <dd className="font-medium text-text-primary tabular-nums">
-                    {formatMoney(
-                      showBreakdown.combinedPerUnitCostCurrency,
-                      costCurrency,
-                    )}
-                  </dd>
-                </div>
-                {showBreakdown.fxApplied && (
-                  <div className="flex justify-between gap-4 border-b border-slate-100 pb-2">
-                    <dt className="text-text-secondary">
-                      Combined per unit (after FX)
-                    </dt>
-                    <dd className="font-medium text-text-primary tabular-nums">
-                      {formatMoney(
-                        showBreakdown.combinedPerUnitQuoteCurrency,
-                        quoteCurrency,
-                      )}
-                    </dd>
-                  </div>
-                )}
-                <div className="flex justify-between gap-4 pt-1">
-                  <dt className="font-semibold text-text-primary">
-                    Sell price per unit
-                  </dt>
-                  <dd className="text-lg font-semibold text-text-primary tabular-nums">
-                    {formatMoney(
-                      showBreakdown.sellPricePerUnitQuoteCurrency,
-                      quoteCurrency,
-                    )}
-                  </dd>
-                </div>
-              </dl>
-
-              <div className="flex flex-wrap gap-2 pt-2">
-                <button
-                  type="button"
-                  className="btn-secondary inline-flex items-center gap-2 text-sm h-9 px-3"
-                  onClick={() => void copyPrice()}
+            {applyFxConversion && (
+              <div>
+                <label className="label">Quote currency</label>
+                <select
+                  className="input h-10 min-w-[8rem]"
+                  value={quoteCurrency}
+                  onChange={(e) =>
+                    setQuoteCurrency(e.target.value === "CAD" ? "CAD" : "USD")
+                  }
                 >
-                  <ClipboardCopy className="h-4 w-4" />
-                  Copy sell price
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary inline-flex items-center gap-2 text-sm h-9 px-3"
-                  onClick={() => void copySummary()}
-                >
-                  <ClipboardCopy className="h-4 w-4" />
-                  Copy breakdown
-                </button>
+                  <option value="USD">USD</option>
+                  <option value="CAD">CAD</option>
+                </select>
               </div>
-              {copied && (
-                <p className="text-caption text-text-secondary" role="status">
-                  Copied {copied === "price" ? "sell price" : "breakdown"} to
-                  clipboard.
-                </p>
-              )}
-            </>
+            )}
+            {fxNeededUi && (
+              <div className="min-w-[12rem]">
+                <label className="label">1 USD = … CAD</label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.0001"
+                  className="input placeholder:text-slate-400"
+                  value={usdCadRateStr}
+                  onChange={(e) => setUsdCadRateStr(e.target.value)}
+                  placeholder={String(DEFAULT_USD_CAD_RATE)}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="overflow-x-auto rounded-md border border-slate-200">
+          <table className="w-full min-w-[960px] border-collapse text-sm">
+            <thead>
+              <tr>
+                <th colSpan={5} className={thCost}>
+                  Cost build-up
+                </th>
+                <th colSpan={5} className={thPrice}>
+                  Pricing &amp; PO
+                </th>
+              </tr>
+              <tr>
+                <th className={thCost}>Qty</th>
+                <th className={thCost}>Sample / inspection</th>
+                <th className={thCost}>Amortization / unit</th>
+                <th className={thCost}>Unit cost</th>
+                <th className={`${thCost} border-r-4 border-r-slate-800`}>
+                  Extended cost / unit
+                </th>
+                <th className={thPrice}>Markup %</th>
+                <th className={thPrice}>Sell price / unit</th>
+                <th className={thPrice}>Profit / unit</th>
+                <th className={thPrice}>Client PO amount</th>
+                <th className={thPrice}>PO profit</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className={td}>
+                  <input
+                    type="number"
+                    min={0}
+                    step="any"
+                    className="input h-9 w-full min-w-0 text-sm"
+                    value={quantityStr}
+                    onChange={(e) => setQuantityStr(e.target.value)}
+                    aria-label="Quantity"
+                  />
+                </td>
+                <td className={td}>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    className="input h-9 w-full min-w-0 text-sm"
+                    value={sampleStr}
+                    onChange={(e) => setSampleStr(e.target.value)}
+                    aria-label="Sample inspection total"
+                  />
+                  <span className="mt-0.5 block text-caption text-text-secondary">
+                    {costCurrency}
+                  </span>
+                </td>
+                <td className={tdReadonly}>
+                  {showBreakdown
+                    ? formatMoney(
+                        showBreakdown.samplePerUnitCostCurrency,
+                        costCurrency,
+                      )
+                    : "—"}
+                </td>
+                <td className={td}>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    className="input h-9 w-full min-w-0 text-sm"
+                    value={unitCostStr}
+                    onChange={(e) => setUnitCostStr(e.target.value)}
+                    aria-label="Unit cost"
+                  />
+                  <span className="mt-0.5 block text-caption text-text-secondary">
+                    {costCurrency}
+                  </span>
+                </td>
+                <td className={tdDivider}>
+                  {showBreakdown
+                    ? formatMoney(
+                        showBreakdown.combinedPerUnitCostCurrency,
+                        costCurrency,
+                      )
+                    : "—"}
+                </td>
+                <td className={td}>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.1"
+                    className="input h-9 w-full min-w-0 text-sm"
+                    value={markupStr}
+                    onChange={(e) => setMarkupStr(e.target.value)}
+                    aria-label="Markup percent"
+                  />
+                </td>
+                <td className={tdReadonly}>
+                  {showBreakdown
+                    ? formatMoney(
+                        showBreakdown.sellPricePerUnitQuoteCurrency,
+                        pricingCurrency,
+                      )
+                    : "—"}
+                  {showBreakdown && (
+                    <span className="mt-0.5 block text-caption text-text-secondary">
+                      {pricingCurrency}
+                    </span>
+                  )}
+                </td>
+                <td className={tdReadonly}>
+                  {showBreakdown
+                    ? formatMoney(
+                        showBreakdown.profitPerUnitQuoteCurrency,
+                        pricingCurrency,
+                      )
+                    : "—"}
+                </td>
+                <td className={tdReadonly}>
+                  {showBreakdown
+                    ? formatMoney(
+                        showBreakdown.clientPoAmountQuoteCurrency,
+                        pricingCurrency,
+                      )
+                    : "—"}
+                </td>
+                <td className={tdReadonly}>
+                  {showBreakdown
+                    ? formatMoney(
+                        showBreakdown.poProfitQuoteCurrency,
+                        pricingCurrency,
+                      )
+                    : "—"}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {isParseResult(result) && (
+          <p className="text-body text-text-secondary">
+            Enter valid numbers for quantity, costs, sample, and markup
+            {fxNeededUi ? " (and a positive exchange rate)" : ""}.
+          </p>
+        )}
+
+        {showErrors && (
+          <ul className="list-inside list-disc space-y-1 text-body text-status-error">
+            {showErrors.map((err) => (
+              <li key={err}>{err}</li>
+            ))}
+          </ul>
+        )}
+
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          <button
+            type="button"
+            className="btn-secondary inline-flex items-center gap-2 text-sm h-9 px-3"
+            disabled={!showBreakdown}
+            onClick={() => void copyPrice()}
+          >
+            <ClipboardCopy className="h-4 w-4" />
+            Copy sell price
+          </button>
+          <button
+            type="button"
+            className="btn-secondary inline-flex items-center gap-2 text-sm h-9 px-3"
+            disabled={!showBreakdown}
+            onClick={() => void copySummary()}
+          >
+            <ClipboardCopy className="h-4 w-4" />
+            Copy breakdown
+          </button>
+          {copied && (
+            <span className="text-caption text-text-secondary" role="status">
+              Copied {copied === "price" ? "sell price" : "breakdown"}.
+            </span>
           )}
         </div>
       </div>

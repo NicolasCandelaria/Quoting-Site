@@ -19,6 +19,9 @@ describe("computeQuickProfit", () => {
     expect(r.breakdown.fxApplied).toBe(false);
     expect(r.breakdown.combinedPerUnitQuoteCurrency).toBe(2);
     expect(r.breakdown.sellPricePerUnitQuoteCurrency).toBe(2);
+    expect(r.breakdown.profitPerUnitQuoteCurrency).toBe(0);
+    expect(r.breakdown.clientPoAmountQuoteCurrency).toBe(800);
+    expect(r.breakdown.poProfitQuoteCurrency).toBe(0);
   });
 
   it("applies markup on same currency combined cost", () => {
@@ -35,6 +38,9 @@ describe("computeQuickProfit", () => {
     if (!r.ok) return;
     expect(r.breakdown.combinedPerUnitQuoteCurrency).toBe(10);
     expect(r.breakdown.sellPricePerUnitQuoteCurrency).toBe(12);
+    expect(r.breakdown.profitPerUnitQuoteCurrency).toBe(2);
+    expect(r.breakdown.clientPoAmountQuoteCurrency).toBe(1200);
+    expect(r.breakdown.poProfitQuoteCurrency).toBe(200);
   });
 
   it("converts USD cost to CAD with R=1.41 then markup", () => {
@@ -53,6 +59,8 @@ describe("computeQuickProfit", () => {
     expect(r.breakdown.combinedPerUnitCostCurrency).toBe(2);
     expect(r.breakdown.combinedPerUnitQuoteCurrency).toBeCloseTo(2 * 1.41, 10);
     expect(r.breakdown.sellPricePerUnitQuoteCurrency).toBeCloseTo(2 * 1.41, 10);
+    expect(r.breakdown.profitPerUnitQuoteCurrency).toBeCloseTo(0, 10);
+    expect(r.breakdown.clientPoAmountQuoteCurrency).toBeCloseTo(400 * 2 * 1.41, 5);
   });
 
   it("converts CAD cost to USD with R=1.41", () => {
@@ -68,6 +76,39 @@ describe("computeQuickProfit", () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.breakdown.combinedPerUnitQuoteCurrency).toBeCloseTo(2, 10);
+  });
+
+  it("skips FX when applyFxConversion is false even if currencies differ", () => {
+    const r = computeQuickProfit({
+      quantity: 400,
+      unitCost: 1,
+      sampleInspectionTotal: 400,
+      costCurrency: "USD",
+      quoteCurrency: "CAD",
+      usdCadRate: 1.41,
+      markupPercent: 10,
+      applyFxConversion: false,
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.breakdown.fxApplied).toBe(false);
+    expect(r.breakdown.combinedPerUnitQuoteCurrency).toBe(2);
+    expect(r.breakdown.sellPricePerUnitQuoteCurrency).toBeCloseTo(2.2, 10);
+    expect(r.breakdown.profitPerUnitQuoteCurrency).toBeCloseTo(0.2, 10);
+  });
+
+  it("does not require FX rate when applyFxConversion is false and currencies differ", () => {
+    const r = computeQuickProfit({
+      quantity: 1,
+      unitCost: 1,
+      sampleInspectionTotal: 0,
+      costCurrency: "USD",
+      quoteCurrency: "CAD",
+      usdCadRate: 0,
+      markupPercent: 0,
+      applyFxConversion: false,
+    });
+    expect(r.ok).toBe(true);
   });
 
   it("rejects non-positive quantity", () => {
