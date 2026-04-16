@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Item, PriceTier } from "@/lib/models";
+import { buildImportedPriceTiers } from "@/lib/quick-profit-calculator-storage";
 import { ImageDropzone } from "./ImageDropzone";
 import { CollageBuilderModal } from "./collage/CollageBuilderModal";
 
@@ -38,6 +39,9 @@ export function ItemForm({
     initial ?? { id: crypto.randomUUID(), ...emptyItemBase },
   );
   const [isCollageModalOpen, setIsCollageModalOpen] = useState(false);
+  const [quickProfitImportError, setQuickProfitImportError] = useState<
+    string | null
+  >(null);
 
   const updateField = (
     field:
@@ -57,6 +61,7 @@ export function ItemForm({
   };
 
   const updatePriceTier = (index: number, patch: Partial<PriceTier>) => {
+    setQuickProfitImportError(null);
     setItem((prev) => {
       const tiers = [...prev.priceTiers];
       const current = tiers[index] ?? {
@@ -70,6 +75,7 @@ export function ItemForm({
   };
 
   const addTier = () => {
+    setQuickProfitImportError(null);
     setItem((prev) => ({
       ...prev,
       priceTiers: [
@@ -80,6 +86,7 @@ export function ItemForm({
   };
 
   const removeTier = (index: number) => {
+    setQuickProfitImportError(null);
     setItem((prev) => ({
       ...prev,
       priceTiers: prev.priceTiers.filter((_, i) => i !== index),
@@ -189,12 +196,38 @@ export function ItemForm({
       </section>
 
       <section className="card space-y-4">
-        <div className="flex items-center justify-between gap-4">
-          <h2 className="text-subsection-title font-semibold text-text-primary">Pricing Tiers</h2>
-          <button type="button" className="btn-secondary !px-3 !py-1.5 text-caption" onClick={addTier}>
-            Add Tier
-          </button>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h2 className="text-subsection-title font-semibold text-text-primary">
+            Pricing Tiers
+          </h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="btn-secondary !px-3 !py-1.5 text-caption"
+              onClick={() => {
+                const r = buildImportedPriceTiers(item.priceTiers);
+                if (r.ok) {
+                  setQuickProfitImportError(null);
+                  setItem((prev) => ({ ...prev, priceTiers: r.tiers }));
+                } else {
+                  setQuickProfitImportError(r.message);
+                }
+              }}
+            >
+              Import from Quick Profit Calculator
+            </button>
+            <button
+              type="button"
+              className="btn-secondary !px-3 !py-1.5 text-caption"
+              onClick={addTier}
+            >
+              Add Tier
+            </button>
+          </div>
         </div>
+        {quickProfitImportError ? (
+          <p className="text-caption text-status-error">{quickProfitImportError}</p>
+        ) : null}
         {item.priceTiers.length === 0 ? (
           <p className="text-caption text-text-secondary">No pricing tiers yet. Add at least one tier for client pricing.</p>
         ) : (
