@@ -6,9 +6,14 @@ export type QuickProfitInput = {
   sampleInspectionTotal: number;
   costCurrency: Currency;
   quoteCurrency: Currency;
-  /** 1 USD = usdCadRate CAD. Used only when cost and quote currencies differ. */
+  /** 1 USD = usdCadRate CAD. Used only when FX is applied. */
   usdCadRate: number;
   markupPercent: number;
+  /**
+   * When false, no USD/CAD conversion is applied (same-currency math using cost currency),
+   * even if cost and quote currencies differ in the UI. Default true.
+   */
+  applyFxConversion?: boolean;
 };
 
 export type QuickProfitBreakdown = {
@@ -17,6 +22,12 @@ export type QuickProfitBreakdown = {
   fxApplied: boolean;
   combinedPerUnitQuoteCurrency: number;
   sellPricePerUnitQuoteCurrency: number;
+  /** Sell minus combined (pre-markup) basis, same currency as sell. */
+  profitPerUnitQuoteCurrency: number;
+  /** quantity × sell price. */
+  clientPoAmountQuoteCurrency: number;
+  /** quantity × profit per unit. */
+  poProfitQuoteCurrency: number;
 };
 
 export type QuickProfitResult =
@@ -28,10 +39,11 @@ function isFiniteNonNegative(n: number): boolean {
 }
 
 /**
- * Amortize sample/inspection into unit cost, optionally convert USD↔CAD, then apply markup % on quote-currency combined per-unit cost.
+ * Amortize sample/inspection into unit cost, optionally convert USD↔CAD, then apply markup % on combined per-unit cost.
  */
 export function computeQuickProfit(input: QuickProfitInput): QuickProfitResult {
   const errors: string[] = [];
+  const applyFx = input.applyFxConversion !== false;
 
   if (!Number.isFinite(input.quantity) || input.quantity <= 0) {
     errors.push("Quantity must be greater than zero.");
@@ -46,7 +58,8 @@ export function computeQuickProfit(input: QuickProfitInput): QuickProfitResult {
     errors.push("Markup must be a number ≥ 0.");
   }
 
-  const fxNeeded = input.costCurrency !== input.quoteCurrency;
+  const fxNeeded =
+    applyFx && input.costCurrency !== input.quoteCurrency;
   if (fxNeeded) {
     if (!Number.isFinite(input.usdCadRate) || input.usdCadRate <= 0) {
       errors.push("Exchange rate must be greater than zero (1 USD = R CAD).");
@@ -85,6 +98,11 @@ export function computeQuickProfit(input: QuickProfitInput): QuickProfitResult {
 
   const sellPricePerUnitQuoteCurrency =
     combinedPerUnitQuoteCurrency * (1 + input.markupPercent / 100);
+  const profitPerUnitQuoteCurrency =
+    sellPricePerUnitQuoteCurrency - combinedPerUnitQuoteCurrency;
+  const clientPoAmountQuoteCurrency =
+    input.quantity * sellPricePerUnitQuoteCurrency;
+  const poProfitQuoteCurrency = input.quantity * profitPerUnitQuoteCurrency;
 
   return {
     ok: true,
@@ -94,6 +112,9 @@ export function computeQuickProfit(input: QuickProfitInput): QuickProfitResult {
       fxApplied,
       combinedPerUnitQuoteCurrency,
       sellPricePerUnitQuoteCurrency,
+      profitPerUnitQuoteCurrency,
+      clientPoAmountQuoteCurrency,
+      poProfitQuoteCurrency,
     },
   };
 }
