@@ -5,6 +5,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Project } from "@/lib/models";
 import { fetchProjects } from "@/lib/api";
+import {
+  getLastAdminProjectId,
+  rememberAdminProjectContext,
+} from "@/lib/admin-last-project";
 import { createClient } from "@/lib/supabase/client";
 import { Home, Calculator, Image, BarChart3, ClipboardList, LogOut } from "lucide-react";
 
@@ -21,6 +25,7 @@ export function AdminSidebar({ open = true }: AdminSidebarProps) {
   const pathname = usePathname() ?? "/";
   const [projects, setProjects] = useState<Project[]>([]);
   const [selected, setSelected] = useState<string>("");
+  const [lastProjectId, setLastProjectId] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -31,7 +36,10 @@ export function AdminSidebar({ open = true }: AdminSidebarProps) {
       }
     };
     void load();
-    const refresh = () => void load();
+    const refresh = () => {
+      void load();
+      setLastProjectId(getLastAdminProjectId());
+    };
     window.addEventListener("focus", refresh);
     return () => window.removeEventListener("focus", refresh);
   }, [pathname]);
@@ -41,8 +49,13 @@ export function AdminSidebar({ open = true }: AdminSidebarProps) {
     setSelected(match?.[1] ?? "");
   }, [pathname]);
 
+  useEffect(() => {
+    setLastProjectId(getLastAdminProjectId());
+  }, [pathname]);
+
   const handleJump = (projectId: string) => {
     if (!projectId) return;
+    rememberAdminProjectContext(projectId);
     router.push(`/admin/projects/${projectId}`);
   };
 
@@ -144,6 +157,14 @@ export function AdminSidebar({ open = true }: AdminSidebarProps) {
               </option>
             ))}
           </select>
+          {lastProjectId ? (
+            <Link
+              href={`/admin/projects/${lastProjectId}#project-items`}
+              className="block rounded-lg px-2 py-2 text-caption font-medium text-[#c8c4e8] transition-colors hover:bg-white/10 hover:text-white"
+            >
+              Back to last project’s items
+            </Link>
+          ) : null}
         </div>
 
         <div className="mt-auto border-t border-white/10 px-3 pt-4 pb-6">

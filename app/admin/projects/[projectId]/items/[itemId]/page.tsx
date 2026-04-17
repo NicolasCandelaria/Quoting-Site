@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import type { Project, Item } from "@/lib/models";
 import { createOrUpdateItem, fetchProject } from "@/lib/api";
 import { ItemForm } from "@/components/ItemForm";
+import { rememberAdminProjectContext } from "@/lib/admin-last-project";
 
 export default function EditItemPage() {
   const params = useParams<{ projectId: string; itemId: string }>();
@@ -15,6 +16,10 @@ export default function EditItemPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [saveError, setSaveError] = useState<string>("");
   const [initialItem, setInitialItem] = useState<Item | null>(null);
+
+  useEffect(() => {
+    rememberAdminProjectContext(projectId);
+  }, [projectId]);
 
   useEffect(() => {
     const load = async () => {

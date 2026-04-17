@@ -10,6 +10,7 @@ import { fetchProject, removeItem, updateProject, deleteProject } from "@/lib/ap
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { formatQuoteDate } from "@/lib/format-date";
 import { MiniFireworks } from "@/components/MiniFireworks";
+import { rememberAdminProjectContext } from "@/lib/admin-last-project";
 
 export default function ProjectDetailPage() {
   const params = useParams<{ projectId: string }>();
@@ -28,6 +29,10 @@ export default function ProjectDetailPage() {
   const [showItemSavedFireworks, setShowItemSavedFireworks] = useState(false);
 
   useEffect(() => {
+    rememberAdminProjectContext(projectId);
+  }, [projectId]);
+
+  useEffect(() => {
     const load = async () => {
       setLoading(true);
       setError("");
@@ -43,6 +48,17 @@ export default function ProjectDetailPage() {
 
     void load();
   }, [projectId]);
+
+  useEffect(() => {
+    if (loading || !project) return;
+    if (window.location.hash !== "#project-items") return;
+    const el = document.getElementById("project-items");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    const path = `${window.location.pathname}${window.location.search}`;
+    window.history.replaceState(null, "", path);
+  }, [loading, project]);
 
   useEffect(() => {
     const fromItemSave = searchParams.get("savedItem") === "1";
@@ -302,7 +318,7 @@ export default function ProjectDetailPage() {
         </form>
       </section>
 
-      <section className="card space-y-4">
+      <section id="project-items" className="card space-y-4">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-subsection-title font-semibold text-text-primary">Items</h2>
           <span className="text-caption text-text-secondary">
