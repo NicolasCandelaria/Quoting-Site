@@ -2,16 +2,56 @@
 
 import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+function safeNextPath(next: string | null): string {
+  if (!next || !next.startsWith("/") || next.startsWith("//")) {
+    return "/admin";
+  }
+  return next;
+}
+
 function LoginForm() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">(
     "idle",
   );
   const [errorMessage, setErrorMessage] = useState("");
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  // If already signed in, skip the email form (same browser shares session cookies across tabs).
+  useEffect(() => {
+    const errorParam = searchParams.get("error");
+    if (errorParam) {
+      setCheckingSession(false);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (cancelled || !user) {
+          if (!cancelled) setCheckingSession(false);
+          return;
+        }
+        const dest = safeNextPath(searchParams.get("next"));
+        router.replace(dest);
+      } catch {
+        if (!cancelled) setCheckingSession(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router, searchParams]);
 
   useEffect(() => {
     const error = searchParams.get("error");
@@ -57,6 +97,16 @@ function LoginForm() {
       setStatus("error");
     }
   };
+
+  if (checkingSession) {
+    return (
+      <div className="flex flex-col gap-4 max-w-md">
+        <p className="text-body text-text-secondary">Checking session…</p>
+        <div className="h-8 w-48 bg-slate-200 rounded animate-pulse" />
+        <div className="h-10 w-full bg-slate-200 rounded animate-pulse" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 max-w-md">
