@@ -65,7 +65,7 @@ alter table public.items
 alter table public.items
   add column if not exists additional_notes text default '';
 
--- Approved account managers (allowlist for magic-link auth)
+-- Approved account managers (allowlist for secure login link / email sign-in)
 create table if not exists public.approved_account_managers (
   email text primary key
 );
