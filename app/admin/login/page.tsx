@@ -65,13 +65,13 @@ function LoginForm() {
           Sign in
         </h1>
         <p className="text-body text-text-secondary mt-1">
-          Enter your email and we&apos;ll send you a magic link to sign in.
+          Enter your email and we&apos;ll send you a secure login link.
         </p>
       </header>
       {status === "sent" ? (
         <div className="card p-4">
           <p className="text-body text-text-primary">
-            Check your email for the magic link. Click it to sign in.
+            Check your email for your secure login link and open it to sign in.
           </p>
           <p className="text-body text-text-secondary mt-2">
             You can close this tab after opening the link.
@@ -113,7 +113,7 @@ function LoginForm() {
             className="btn-primary"
             disabled={status === "sending"}
           >
-            {status === "sending" ? "Sending…" : "Send magic link"}
+            {status === "sending" ? "Sending…" : "Send secure login link"}
           </button>
         </form>
       )}
