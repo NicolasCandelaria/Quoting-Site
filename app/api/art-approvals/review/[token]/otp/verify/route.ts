@@ -7,12 +7,12 @@ import {
   ART_APPROVAL_MAX_OTP_VERIFY_ATTEMPTS,
   ART_APPROVAL_REVIEW_SESSION_COOKIE,
   ART_APPROVAL_REVIEW_SESSION_MAX_AGE_SEC,
+  consumeArtApprovalOtpChallengeIfOpen,
   fetchLatestOpenOtpChallenge,
   getArtApprovalReadyForClientByRawToken,
   getArtApprovalReviewSessionSecret,
   incrementArtApprovalOtpChallengeAttempts,
   isEmailAllowlistedForArtApproval,
-  markArtApprovalOtpChallengeConsumed,
   signArtApprovalReviewSession,
   verifyOtpCode,
 } from "@/lib/server/art-approvals";
@@ -110,14 +110,41 @@ export async function POST(
   }
 
   if (!matches) {
-    await incrementArtApprovalOtpChallengeAttempts(
-      challenge.id,
-      challenge.attempts,
-    );
+    let newAttempts: number | null;
+    try {
+      newAttempts = await incrementArtApprovalOtpChallengeAttempts(challenge.id);
+    } catch (error) {
+      console.error("[art-approval] atomic OTP attempt increment failed", error);
+      return NextResponse.json(
+        { error: "Service is temporarily unavailable." },
+        { status: 500 },
+      );
+    }
+    if (
+      newAttempts !== null &&
+      newAttempts >= ART_APPROVAL_MAX_OTP_VERIFY_ATTEMPTS
+    ) {
+      return NextResponse.json(
+        { error: "Too many attempts. Request a new code." },
+        { status: 429 },
+      );
+    }
     return NextResponse.json({ error: GENERIC_VERIFY_FAIL }, { status: 401 });
   }
 
-  await markArtApprovalOtpChallengeConsumed(challenge.id);
+  let consumed;
+  try {
+    consumed = await consumeArtApprovalOtpChallengeIfOpen(challenge.id);
+  } catch (error) {
+    console.error("[art-approval] atomic OTP consume failed", error);
+    return NextResponse.json(
+      { error: "Service is temporarily unavailable." },
+      { status: 500 },
+    );
+  }
+  if (!consumed) {
+    return NextResponse.json({ error: GENERIC_VERIFY_FAIL }, { status: 401 });
+  }
 
   const sessionValue = signArtApprovalReviewSession({
     approvalId: approval.id,

@@ -143,7 +143,11 @@ export async function POST(
     if (message.includes("already been recorded")) {
       return NextResponse.json({ error: message }, { status: 409 });
     }
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[art-approval] saveClientDecision failed", error);
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again later." },
+      { status: 500 },
+    );
   }
 }
 

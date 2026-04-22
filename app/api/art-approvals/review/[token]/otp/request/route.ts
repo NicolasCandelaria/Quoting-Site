@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { normalizeEmail } from "@/lib/art-approvals/validation";
 import {
   ART_APPROVAL_OTP_CHALLENGE_TTL_MS,
+  deleteArtApprovalOtpChallengeById,
   generateNumericOtpCode,
   getArtApprovalReadyForClientByRawToken,
   getOtpSendCooldownRemainingMs,
@@ -78,13 +79,15 @@ export async function POST(
   const otp = generateNumericOtpCode();
   const expiresAt = new Date(Date.now() + ART_APPROVAL_OTP_CHALLENGE_TTL_MS).toISOString();
 
+  let challengeId: string;
   try {
-    await insertArtApprovalOtpChallenge({
+    const inserted = await insertArtApprovalOtpChallenge({
       artApprovalId: approval.id,
       email,
       otp,
       expiresAtIso: expiresAt,
     });
+    challengeId = inserted.id;
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     if (message.includes("ART_APPROVAL_OTP_SECRET")) {
@@ -102,7 +105,16 @@ export async function POST(
       otpCode: otp,
       approvalTitle: approval.title,
     });
-  } catch {
+  } catch (error) {
+    console.error("[art-approval] OTP email send failed after challenge insert", error);
+    try {
+      await deleteArtApprovalOtpChallengeById(challengeId);
+    } catch (cleanupError) {
+      console.error(
+        "[art-approval] Failed to delete OTP challenge after send failure",
+        cleanupError,
+      );
+    }
     return NextResponse.json(
       { error: "Verification email could not be sent." },
       { status: 502 },

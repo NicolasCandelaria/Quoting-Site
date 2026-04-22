@@ -752,26 +752,52 @@ export async function fetchLatestOpenOtpChallenge(
   return rows[0];
 }
 
-export async function markArtApprovalOtpChallengeConsumed(
+export async function deleteArtApprovalOtpChallengeById(
   challengeId: string,
 ): Promise<void> {
-  const now = new Date().toISOString();
   await request<void>(`/art_approval_otp_challenges?id=eq.${challengeId}`, {
-    method: "PATCH",
-    headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ consumed_at: now }),
+    method: "DELETE",
   });
 }
 
+/**
+ * Atomically increments `attempts` for a challenge row (single UPDATE … RETURNING).
+ * Requires `increment_art_approval_otp_challenge_attempts` RPC (see `db/art-approval-otp-rpc.sql`).
+ * Returns the new attempts value, or `null` if the row did not exist.
+ */
 export async function incrementArtApprovalOtpChallengeAttempts(
   challengeId: string,
-  currentAttempts: number,
-): Promise<void> {
-  await request<void>(`/art_approval_otp_challenges?id=eq.${challengeId}`, {
-    method: "PATCH",
-    headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ attempts: currentAttempts + 1 }),
+): Promise<number | null> {
+  const value = await request<number | null>(
+    `/rpc/increment_art_approval_otp_challenge_attempts`,
+    {
+      method: "POST",
+      body: JSON.stringify({ p_challenge_id: challengeId }),
+    },
+  );
+  return value === null || value === undefined ? null : value;
+}
+
+/**
+ * Sets `consumed_at` only when still null; returns the updated row if consumed, else empty.
+ * Requires `consume_art_approval_otp_challenge_if_open` RPC (see `db/art-approval-otp-rpc.sql`).
+ */
+export async function consumeArtApprovalOtpChallengeIfOpen(
+  challengeId: string,
+): Promise<SupabaseRowOtpChallenge | undefined> {
+  const data = await request<
+    SupabaseRowOtpChallenge[] | SupabaseRowOtpChallenge
+  >(`/rpc/consume_art_approval_otp_challenge_if_open`, {
+    method: "POST",
+    body: JSON.stringify({ p_challenge_id: challengeId }),
   });
+  if (Array.isArray(data)) {
+    return data[0];
+  }
+  if (data && typeof data === "object" && "id" in data) {
+    return data as SupabaseRowOtpChallenge;
+  }
+  return undefined;
 }
 
 export function signArtApprovalReviewSession(
