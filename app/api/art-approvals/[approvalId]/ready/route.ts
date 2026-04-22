@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSessionUser } from "@/lib/server/auth";
+import { getSessionUser, isEmailApproved } from "@/lib/server/auth";
 import {
   getArtApprovalFromSupabase,
   markArtApprovalReadyForClient,
@@ -18,8 +18,11 @@ export async function POST(
   }
 
   const user = await getSessionUser();
-  if (!user) {
+  if (!user?.email) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  if (!(await isEmailApproved(user.email))) {
+    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   }
 
   const { approvalId } = await context.params;

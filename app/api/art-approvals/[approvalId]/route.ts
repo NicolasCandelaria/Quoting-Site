@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { UpdateArtApprovalInput } from "@/lib/art-approvals/models";
-import { getSessionUser } from "@/lib/server/auth";
+import { getSessionUser, isEmailApproved } from "@/lib/server/auth";
 import {
   getArtApprovalFromSupabase,
   updateArtApprovalInSupabase,
@@ -73,6 +73,21 @@ async function handleUpdate(
     );
   }
 
+  if (
+    "status" in patch &&
+    (patch.status === "approved" ||
+      patch.status === "changes_requested" ||
+      patch.status === "ready_for_client")
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          'Status cannot be set to "approved", "changes_requested", or "ready_for_client" from this endpoint. Use POST /api/art-approvals/:id/ready to send to the client; client outcomes are recorded only through the review flow.',
+      },
+      { status: 400 },
+    );
+  }
+
   const current = await getArtApprovalFromSupabase(approvalId);
   if (!current) {
     return NextResponse.json({ error: "Art approval not found." }, { status: 404 });
@@ -123,8 +138,11 @@ export async function GET(
   }
 
   const user = await getSessionUser();
-  if (!user) {
+  if (!user?.email) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  if (!(await isEmailApproved(user.email))) {
+    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   }
 
   const { approvalId } = await context.params;
@@ -153,8 +171,11 @@ export async function PATCH(
   }
 
   const user = await getSessionUser();
-  if (!user) {
+  if (!user?.email) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  if (!(await isEmailApproved(user.email))) {
+    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   }
 
   const { approvalId } = await context.params;
@@ -174,8 +195,11 @@ export async function POST(
   }
 
   const user = await getSessionUser();
-  if (!user) {
+  if (!user?.email) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  if (!(await isEmailApproved(user.email))) {
+    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   }
 
   const { approvalId } = await context.params;

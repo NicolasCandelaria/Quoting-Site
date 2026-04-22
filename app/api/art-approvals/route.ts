@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSessionUser } from "@/lib/server/auth";
+import { getSessionUser, isEmailApproved } from "@/lib/server/auth";
 import {
   createArtApprovalInSupabase,
   getArtApprovalFromSupabase,
@@ -16,8 +16,11 @@ export async function GET() {
   }
 
   const user = await getSessionUser();
-  if (!user) {
+  if (!user?.email) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  if (!(await isEmailApproved(user.email))) {
+    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   }
 
   try {
@@ -40,6 +43,9 @@ export async function POST(request: Request) {
   const user = await getSessionUser();
   if (!user?.email) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  if (!(await isEmailApproved(user.email))) {
+    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   }
 
   let payload: {
