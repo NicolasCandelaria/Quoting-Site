@@ -83,6 +83,34 @@ create index if not exists idx_art_approval_otp_active
   on public.art_approval_otp_challenges (art_approval_id, email, expires_at)
   where consumed_at is null;
 
+-- PostgREST RPCs: atomic OTP attempt increment and single-winner consume (see also db/supabase-schema.sql).
+create or replace function public.increment_art_approval_otp_challenge_attempts(p_challenge_id uuid)
+returns integer
+language sql
+volatile
+as $$
+  select attempts from (
+    update public.art_approval_otp_challenges
+    set attempts = attempts + 1
+    where id = p_challenge_id
+    returning attempts
+  ) t;
+$$;
+
+create or replace function public.consume_art_approval_otp_challenge_if_open(p_challenge_id uuid)
+returns setof public.art_approval_otp_challenges
+language sql
+volatile
+as $$
+  update public.art_approval_otp_challenges
+  set consumed_at = now()
+  where id = p_challenge_id and consumed_at is null
+  returning *;
+$$;
+
+grant execute on function public.increment_art_approval_otp_challenge_attempts(uuid) to anon, authenticated, service_role;
+grant execute on function public.consume_art_approval_otp_challenge_if_open(uuid) to anon, authenticated, service_role;
+
 create table if not exists public.art_approval_client_decisions (
   id uuid primary key default gen_random_uuid(),
   art_approval_id uuid not null references public.art_approvals(id) on delete cascade,

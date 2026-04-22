@@ -762,7 +762,7 @@ export async function deleteArtApprovalOtpChallengeById(
 
 /**
  * Atomically increments `attempts` for a challenge row (single UPDATE … RETURNING).
- * Requires `increment_art_approval_otp_challenge_attempts` RPC (see `db/art-approval-otp-rpc.sql`).
+ * Requires `increment_art_approval_otp_challenge_attempts` RPC (see `db/add-art-approvals.sql`).
  * Returns the new attempts value, or `null` if the row did not exist.
  */
 export async function incrementArtApprovalOtpChallengeAttempts(
@@ -780,7 +780,7 @@ export async function incrementArtApprovalOtpChallengeAttempts(
 
 /**
  * Sets `consumed_at` only when still null; returns the updated row if consumed, else empty.
- * Requires `consume_art_approval_otp_challenge_if_open` RPC (see `db/art-approval-otp-rpc.sql`).
+ * Requires `consume_art_approval_otp_challenge_if_open` RPC (see `db/add-art-approvals.sql`).
  */
 export async function consumeArtApprovalOtpChallengeIfOpen(
   challengeId: string,
