@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
-
-import type { CreateArtApprovalInput } from "@/lib/art-approvals/models";
-import { getSessionUser } from "@/lib/server/auth";
+import { getSessionUser, isEmailApproved } from "@/lib/server/auth";
 import {
   createArtApprovalInSupabase,
+  getArtApprovalFromSupabase,
   listArtApprovalsFromSupabase,
 } from "@/lib/server/art-approvals";
 import { isSupabaseConfigured } from "@/lib/server/supabase";
@@ -17,8 +16,11 @@ export async function GET() {
   }
 
   const user = await getSessionUser();
-  if (!user) {
+  if (!user?.email) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  if (!(await isEmailApproved(user.email))) {
+    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   }
 
   try {
@@ -42,48 +44,46 @@ export async function POST(request: Request) {
   if (!user?.email) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
+  if (!(await isEmailApproved(user.email))) {
+    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+  }
 
-  let payload: unknown;
+  let payload: {
+    title?: string;
+    clientName?: string;
+    notes?: string;
+    optionalProjectId?: string;
+    optionalItemId?: string;
+  };
   try {
-    payload = await request.json();
+    payload = (await request.json()) as typeof payload;
   } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  if (typeof payload !== "object" || payload === null) {
-    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
-  }
-
-  const body = payload as Record<string, unknown>;
-  const title = typeof body.title === "string" ? body.title.trim() : "";
-  const clientName = typeof body.clientName === "string" ? body.clientName.trim() : "";
-
-  if (!title || !clientName) {
+  if (!payload.title?.trim() || !payload.clientName?.trim()) {
     return NextResponse.json(
       { error: "Title and client name are required." },
       { status: 400 },
     );
   }
 
-  const input: CreateArtApprovalInput = {
-    title,
-    clientName,
-    notes: typeof body.notes === "string" ? body.notes.trim() || undefined : undefined,
-    optionalProjectId:
-      typeof body.optionalProjectId === "string" && body.optionalProjectId.trim()
-        ? body.optionalProjectId.trim()
-        : undefined,
-    optionalItemId:
-      typeof body.optionalItemId === "string" && body.optionalItemId.trim()
-        ? body.optionalItemId.trim()
-        : undefined,
-  };
-
   try {
-    const approval = await createArtApprovalInSupabase({
-      ...input,
+    const summary = await createArtApprovalInSupabase({
+      title: payload.title.trim(),
+      clientName: payload.clientName.trim(),
+      notes: payload.notes?.trim() || undefined,
+      optionalProjectId: payload.optionalProjectId?.trim() || undefined,
+      optionalItemId: payload.optionalItemId?.trim() || undefined,
       createdBy: user.email,
     });
+    const approval = await getArtApprovalFromSupabase(summary.id);
+    if (!approval) {
+      return NextResponse.json(
+        { error: "Art approval was created but could not be loaded." },
+        { status: 500 },
+      );
+    }
     return NextResponse.json({ approval }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error.";

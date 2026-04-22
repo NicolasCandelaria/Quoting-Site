@@ -1,45 +1,129 @@
 import { NextResponse } from "next/server";
-
 import type { UpdateArtApprovalInput } from "@/lib/art-approvals/models";
-import { isValidArtApprovalStatus } from "@/lib/art-approvals/validation";
-import { getSessionUser } from "@/lib/server/auth";
+import { getSessionUser, isEmailApproved } from "@/lib/server/auth";
 import {
   getArtApprovalFromSupabase,
   updateArtApprovalInSupabase,
 } from "@/lib/server/art-approvals";
 import { isSupabaseConfigured } from "@/lib/server/supabase";
 
-function parseUpdatePatch(body: unknown): UpdateArtApprovalInput | null {
-  if (typeof body !== "object" || body === null) return null;
-  const o = body as Record<string, unknown>;
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parseUpdateBody(body: unknown): UpdateArtApprovalInput | null {
+  if (!isPlainObject(body)) return null;
   const patch: UpdateArtApprovalInput = {};
+  if ("title" in body && typeof body.title === "string") patch.title = body.title;
+  if ("clientName" in body && typeof body.clientName === "string") {
+    patch.clientName = body.clientName;
+  }
+  if ("status" in body && typeof body.status === "string") {
+    patch.status = body.status as UpdateArtApprovalInput["status"];
+  }
+  if ("notes" in body) {
+    if (body.notes === null) patch.notes = undefined;
+    else if (typeof body.notes === "string") patch.notes = body.notes;
+  }
+  if ("optionalProjectId" in body) {
+    if (body.optionalProjectId === null) patch.optionalProjectId = undefined;
+    else if (typeof body.optionalProjectId === "string") {
+      patch.optionalProjectId = body.optionalProjectId;
+    }
+  }
+  if ("optionalItemId" in body) {
+    if (body.optionalItemId === null) patch.optionalItemId = undefined;
+    else if (typeof body.optionalItemId === "string") {
+      patch.optionalItemId = body.optionalItemId;
+    }
+  }
+  return patch;
+}
 
-  if (typeof o.title === "string") {
-    const t = o.title.trim();
-    if (t) patch.title = t;
-  }
-  if (typeof o.clientName === "string") {
-    const c = o.clientName.trim();
-    if (c) patch.clientName = c;
-  }
-  if ("notes" in o && typeof o.notes === "string") {
-    patch.notes = o.notes.trim();
-  }
-  if (o.optionalProjectId === null) {
-    patch.optionalProjectId = undefined;
-  } else if (typeof o.optionalProjectId === "string" && o.optionalProjectId.trim()) {
-    patch.optionalProjectId = o.optionalProjectId.trim();
-  }
-  if (o.optionalItemId === null) {
-    patch.optionalItemId = undefined;
-  } else if (typeof o.optionalItemId === "string" && o.optionalItemId.trim()) {
-    patch.optionalItemId = o.optionalItemId.trim();
-  }
-  if (typeof o.status === "string" && isValidArtApprovalStatus(o.status)) {
-    patch.status = o.status;
+function countPatchKeys(patch: UpdateArtApprovalInput): number {
+  return Object.keys(patch).length;
+}
+
+async function handleUpdate(
+  request: Request,
+  approvalId: string,
+): Promise<NextResponse> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  return Object.keys(patch).length > 0 ? patch : null;
+  const patch = parseUpdateBody(body);
+  if (!patch || countPatchKeys(patch) === 0) {
+    return NextResponse.json(
+      { error: "At least one field is required to update." },
+      { status: 400 },
+    );
+  }
+
+  if ("title" in patch && !patch.title?.trim()) {
+    return NextResponse.json({ error: "Title cannot be empty." }, { status: 400 });
+  }
+  if ("clientName" in patch && !patch.clientName?.trim()) {
+    return NextResponse.json(
+      { error: "Client name cannot be empty." },
+      { status: 400 },
+    );
+  }
+
+  if (
+    "status" in patch &&
+    (patch.status === "approved" ||
+      patch.status === "changes_requested" ||
+      patch.status === "ready_for_client")
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          'Status cannot be set to "approved", "changes_requested", or "ready_for_client" from this endpoint. Use POST /api/art-approvals/:id/ready to send to the client; client outcomes are recorded only through the review flow.',
+      },
+      { status: 400 },
+    );
+  }
+
+  const current = await getArtApprovalFromSupabase(approvalId);
+  if (!current) {
+    return NextResponse.json({ error: "Art approval not found." }, { status: 404 });
+  }
+
+  if (current.status === "approved") {
+    return NextResponse.json(
+      { error: "Approved records are read-only." },
+      { status: 409 },
+    );
+  }
+
+  try {
+    await updateArtApprovalInSupabase(approvalId, patch);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error.";
+    if (message === "No fields to update.") {
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+    if (message.includes("Invalid art approval status")) {
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+    if (message.includes("not found") || message.includes("not updated")) {
+      return NextResponse.json({ error: "Art approval not found." }, { status: 404 });
+    }
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+
+  const approval = await getArtApprovalFromSupabase(approvalId);
+  if (!approval) {
+    return NextResponse.json(
+      { error: "Art approval not found after update." },
+      { status: 404 },
+    );
+  }
+  return NextResponse.json({ approval });
 }
 
 export async function GET(
@@ -54,8 +138,11 @@ export async function GET(
   }
 
   const user = await getSessionUser();
-  if (!user) {
+  if (!user?.email) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  if (!(await isEmailApproved(user.email))) {
+    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   }
 
   const { approvalId } = await context.params;
@@ -84,39 +171,37 @@ export async function PATCH(
   }
 
   const user = await getSessionUser();
-  if (!user) {
+  if (!user?.email) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  if (!(await isEmailApproved(user.email))) {
+    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   }
 
   const { approvalId } = await context.params;
+  return handleUpdate(request, approvalId);
+}
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
-  }
-
-  const patch = parseUpdatePatch(body);
-  if (!patch) {
+/** @deprecated Prefer PATCH; kept for existing client helpers that use POST. */
+export async function POST(
+  request: Request,
+  context: { params: Promise<{ approvalId: string }> },
+) {
+  if (!isSupabaseConfigured()) {
     return NextResponse.json(
-      { error: "No valid fields to update." },
-      { status: 400 },
+      { error: "Supabase is not configured." },
+      { status: 500 },
     );
   }
 
-  try {
-    const approval = await updateArtApprovalInSupabase(approvalId, patch);
-    return NextResponse.json({ approval });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error.";
-    const lower = message.toLowerCase();
-    if (lower.includes("not found") || lower.includes("no fields to update")) {
-      return NextResponse.json({ error: message }, { status: 400 });
-    }
-    if (lower.includes("read-only") || lower.includes("approved records")) {
-      return NextResponse.json({ error: message }, { status: 409 });
-    }
-    return NextResponse.json({ error: message }, { status: 500 });
+  const user = await getSessionUser();
+  if (!user?.email) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
+  if (!(await isEmailApproved(user.email))) {
+    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+  }
+
+  const { approvalId } = await context.params;
+  return handleUpdate(request, approvalId);
 }

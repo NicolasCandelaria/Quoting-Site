@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
-
-import { assertAllowlistEmailArray } from "@/lib/art-approvals/validation";
-import { getSessionUser } from "@/lib/server/auth";
-import { replaceAllowlistedEmailsForApproval } from "@/lib/server/art-approvals";
+import { getSessionUser, isEmailApproved } from "@/lib/server/auth";
+import { assertAllowlistEmails } from "@/lib/art-approvals/validation";
+import {
+  getArtApprovalFromSupabase,
+  replaceAllowlistedEmailsForApproval,
+  SupabaseRequestError,
+} from "@/lib/server/art-approvals";
 import { isSupabaseConfigured } from "@/lib/server/supabase";
 
 export async function POST(
@@ -17,37 +20,66 @@ export async function POST(
   }
 
   const user = await getSessionUser();
-  if (!user) {
+  if (!user?.email) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  if (!(await isEmailApproved(user.email))) {
+    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   }
 
   const { approvalId } = await context.params;
 
-  let body: unknown;
+  let payload: { emails?: unknown };
   try {
-    body = await request.json();
+    payload = (await request.json()) as { emails?: unknown };
   } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  if (typeof body !== "object" || body === null || !Array.isArray((body as { emails?: unknown }).emails)) {
-    return NextResponse.json({ error: "Body must include an emails array." }, { status: 400 });
-  }
-
-  const emails = (body as { emails: unknown }).emails;
-
   try {
-    assertAllowlistEmailArray(emails);
+    assertAllowlistEmails(payload.emails);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Invalid allowlist.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 
-  try {
-    const allowlistedEmails = await replaceAllowlistedEmailsForApproval(approvalId, emails);
-    return NextResponse.json({ allowlistedEmails });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error.";
-    return NextResponse.json({ error: message }, { status: 500 });
+  const current = await getArtApprovalFromSupabase(approvalId);
+  if (!current) {
+    return NextResponse.json({ error: "Art approval not found." }, { status: 404 });
   }
+
+  if (current.status === "approved") {
+    return NextResponse.json(
+      { error: "Approved records are read-only." },
+      { status: 409 },
+    );
+  }
+
+  try {
+    await replaceAllowlistedEmailsForApproval(approvalId, payload.emails);
+  } catch (error) {
+    if (error instanceof SupabaseRequestError) {
+      return NextResponse.json(
+        { error: "Allowlist update failed in the database." },
+        { status: 500 },
+      );
+    }
+    const message = error instanceof Error ? error.message : "Unknown error.";
+    if (
+      message.startsWith("Allowlist must") ||
+      message.startsWith("Each allowlist entry")
+    ) {
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+    return NextResponse.json(
+      { error: "Allowlist update failed." },
+      { status: 500 },
+    );
+  }
+
+  const approval = await getArtApprovalFromSupabase(approvalId);
+  if (!approval) {
+    return NextResponse.json({ error: "Art approval not found." }, { status: 404 });
+  }
+  return NextResponse.json({ approval });
 }
