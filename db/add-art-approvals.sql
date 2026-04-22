@@ -101,28 +101,8 @@ create table if not exists public.art_approval_client_decisions (
 create index if not exists idx_art_approval_client_decisions_timeline
   on public.art_approval_client_decisions(art_approval_id, round, decided_at desc);
 
--- Replace legacy approved/comment compound check (optional comment allowed on approved)
-do $$
-declare
-  cname text;
-begin
-  for cname in
-    select c.conname::text
-    from pg_constraint c
-    join pg_class t on c.conrelid = t.oid
-    join pg_namespace n on t.relnamespace = n.oid
-    where n.nspname = 'public'
-      and t.relname = 'art_approval_client_decisions'
-      and c.contype = 'c'
-      and c.conname is distinct from 'art_approval_client_decisions_comment_rule'
-      and pg_get_constraintdef(c.oid) ilike '%approved%'
-      and pg_get_constraintdef(c.oid) ilike '%comment%'
-  loop
-    execute format('alter table public.art_approval_client_decisions drop constraint %I', cname);
-  end loop;
-exception
-  when undefined_table then null;
-end $$;
+alter table public.art_approval_client_decisions
+  drop constraint if exists art_approval_client_decisions_check;
 
 alter table public.art_approval_client_decisions
   drop constraint if exists art_approval_client_decisions_comment_rule;

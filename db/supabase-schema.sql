@@ -92,9 +92,6 @@ create table if not exists public.art_approvals (
   check (review_token_hash is null or length(review_token_hash) >= 32)
 );
 
-alter table public.art_approvals
-  add column if not exists optional_item_id uuid references public.items(id) on delete set null;
-
 create index if not exists idx_art_approvals_status on public.art_approvals(status);
 create index if not exists idx_art_approvals_client_name on public.art_approvals(client_name);
 create index if not exists idx_art_approvals_project_id on public.art_approvals(optional_project_id);
@@ -174,33 +171,3 @@ create table if not exists public.art_approval_client_decisions (
 create index if not exists idx_art_approval_client_decisions_timeline
   on public.art_approval_client_decisions(art_approval_id, round, decided_at desc);
 
-do $$
-declare
-  cname text;
-begin
-  for cname in
-    select c.conname::text
-    from pg_constraint c
-    join pg_class t on c.conrelid = t.oid
-    join pg_namespace n on t.relnamespace = n.oid
-    where n.nspname = 'public'
-      and t.relname = 'art_approval_client_decisions'
-      and c.contype = 'c'
-      and c.conname is distinct from 'art_approval_client_decisions_comment_rule'
-      and pg_get_constraintdef(c.oid) ilike '%approved%'
-      and pg_get_constraintdef(c.oid) ilike '%comment%'
-  loop
-    execute format('alter table public.art_approval_client_decisions drop constraint %I', cname);
-  end loop;
-exception
-  when undefined_table then null;
-end $$;
-
-alter table public.art_approval_client_decisions
-  drop constraint if exists art_approval_client_decisions_comment_rule;
-
-alter table public.art_approval_client_decisions
-  add constraint art_approval_client_decisions_comment_rule check (
-    decision_type <> 'changes_requested'
-    or length(trim(coalesce(comment, ''))) > 0
-  );
