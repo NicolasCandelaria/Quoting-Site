@@ -658,3 +658,235 @@ export async function insertArtApprovalOtpChallenge(input: {
   if (!row) throw new Error("Failed to create OTP challenge.");
   return { id: row.id };
 }
+
+/** httpOnly cookie name for verified client review sessions (OTP passed). */
+export const ART_APPROVAL_REVIEW_SESSION_COOKIE = "art_approval_review";
+
+const OTP_SEND_COOLDOWN_MS = 60_000;
+export const ART_APPROVAL_OTP_CHALLENGE_TTL_MS = 10 * 60_000;
+export const ART_APPROVAL_MAX_OTP_VERIFY_ATTEMPTS = 10;
+export const ART_APPROVAL_REVIEW_SESSION_MAX_AGE_SEC = 60 * 60;
+
+type SupabaseRowOtpChallenge = {
+  id: string;
+  art_approval_id: string;
+  email: string;
+  otp_hash: string;
+  expires_at: string;
+  consumed_at: string | null;
+  attempts: number;
+  created_at: string;
+};
+
+export function getArtApprovalReviewSessionSecret(): string {
+  const secret = process.env.ART_APPROVAL_REVIEW_SESSION_SECRET?.trim();
+  if (!secret || secret.length < 16) {
+    throw new Error(
+      "ART_APPROVAL_REVIEW_SESSION_SECRET must be set to a string of at least 16 characters for client review sessions.",
+    );
+  }
+  return secret;
+}
+
+export type ArtApprovalReviewSessionPayload = {
+  approvalId: string;
+  email: string;
+  round: number;
+};
+
+/**
+ * Resolves an art approval that is open for client review using the raw URL token.
+ * Returns undefined when the token does not match or the record is not in `ready_for_client`.
+ */
+export async function getArtApprovalReadyForClientByRawToken(
+  rawToken: string,
+): Promise<ArtApprovalSummary | undefined> {
+  const trimmed = rawToken?.trim();
+  if (!trimmed) return undefined;
+  const tokenHash = hashReviewToken(trimmed);
+  const approval = await getArtApprovalByReviewTokenHash(tokenHash);
+  if (!approval || approval.status !== "ready_for_client") {
+    return undefined;
+  }
+  return approval;
+}
+
+export async function isEmailAllowlistedForArtApproval(
+  approvalId: string,
+  normalizedEmail: string,
+): Promise<boolean> {
+  const email = normalizeEmail(normalizedEmail);
+  if (!email.includes("@")) return false;
+  const rows = await request<{ id: string }[]>(
+    `/art_approval_allowlisted_emails?select=id&art_approval_id=eq.${approvalId}&email=eq.${encodeURIComponent(email)}&limit=1`,
+  );
+  return Boolean(rows[0]);
+}
+
+/**
+ * Returns milliseconds until another OTP may be sent for this approval + email, or 0 if allowed.
+ */
+export async function getOtpSendCooldownRemainingMs(
+  artApprovalId: string,
+  email: string,
+): Promise<number> {
+  const normalized = normalizeEmail(email);
+  const rows = await request<{ created_at: string }[]>(
+    `/art_approval_otp_challenges?select=created_at&art_approval_id=eq.${artApprovalId}&email=eq.${encodeURIComponent(normalized)}&order=created_at.desc&limit=1`,
+  );
+  const last = rows[0];
+  if (!last) return 0;
+  const created = new Date(last.created_at).getTime();
+  const elapsed = Date.now() - created;
+  return Math.max(0, OTP_SEND_COOLDOWN_MS - elapsed);
+}
+
+export async function fetchLatestOpenOtpChallenge(
+  artApprovalId: string,
+  email: string,
+): Promise<SupabaseRowOtpChallenge | undefined> {
+  const normalized = normalizeEmail(email);
+  const rows = await request<SupabaseRowOtpChallenge[]>(
+    `/art_approval_otp_challenges?select=id,art_approval_id,email,otp_hash,expires_at,consumed_at,attempts,created_at&art_approval_id=eq.${artApprovalId}&email=eq.${encodeURIComponent(normalized)}&consumed_at=is.null&order=created_at.desc&limit=1`,
+  );
+  return rows[0];
+}
+
+export async function markArtApprovalOtpChallengeConsumed(
+  challengeId: string,
+): Promise<void> {
+  const now = new Date().toISOString();
+  await request<void>(`/art_approval_otp_challenges?id=eq.${challengeId}`, {
+    method: "PATCH",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ consumed_at: now }),
+  });
+}
+
+export async function incrementArtApprovalOtpChallengeAttempts(
+  challengeId: string,
+  currentAttempts: number,
+): Promise<void> {
+  await request<void>(`/art_approval_otp_challenges?id=eq.${challengeId}`, {
+    method: "PATCH",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ attempts: currentAttempts + 1 }),
+  });
+}
+
+export function signArtApprovalReviewSession(
+  payload: ArtApprovalReviewSessionPayload,
+  maxAgeSec: number = ART_APPROVAL_REVIEW_SESSION_MAX_AGE_SEC,
+): string {
+  const secret = getArtApprovalReviewSessionSecret();
+  const envelope = {
+    v: 1 as const,
+    approvalId: payload.approvalId,
+    email: payload.email,
+    round: payload.round,
+    exp: Math.floor(Date.now() / 1000) + maxAgeSec,
+  };
+  const payloadB64 = Buffer.from(JSON.stringify(envelope), "utf8").toString(
+    "base64url",
+  );
+  const sig = createHmac("sha256", secret).update(payloadB64).digest("base64url");
+  return `${payloadB64}.${sig}`;
+}
+
+export function verifyArtApprovalReviewSession(
+  cookieValue: string | undefined,
+): ArtApprovalReviewSessionPayload | null {
+  if (!cookieValue?.trim()) return null;
+  let secret: string;
+  try {
+    secret = getArtApprovalReviewSessionSecret();
+  } catch {
+    return null;
+  }
+  const dot = cookieValue.indexOf(".");
+  if (dot <= 0) return null;
+  const payloadB64 = cookieValue.slice(0, dot);
+  const sig = cookieValue.slice(dot + 1);
+  if (!payloadB64 || !sig) return null;
+  const expected = createHmac("sha256", secret).update(payloadB64).digest("base64url");
+  if (expected.length !== sig.length) return null;
+  try {
+    if (!timingSafeEqual(Buffer.from(sig, "utf8"), Buffer.from(expected, "utf8"))) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+  let parsed: {
+    v: number;
+    approvalId: string;
+    email: string;
+    round: number;
+    exp: number;
+  };
+  try {
+    parsed = JSON.parse(Buffer.from(payloadB64, "base64url").toString("utf8"));
+  } catch {
+    return null;
+  }
+  if (parsed.v !== 1 || typeof parsed.approvalId !== "string") return null;
+  if (typeof parsed.email !== "string" || typeof parsed.round !== "number") return null;
+  if (typeof parsed.exp !== "number") return null;
+  if (parsed.exp < Math.floor(Date.now() / 1000)) return null;
+  return {
+    approvalId: parsed.approvalId,
+    email: normalizeEmail(parsed.email),
+    round: parsed.round,
+  };
+}
+
+export type SendArtApprovalOtpResult =
+  | { channel: "resend" }
+  | { channel: "dev_log" }
+  | { channel: "none"; error: string };
+
+/**
+ * Delivers a one-time code for art approval review. Prefers Resend when `RESEND_API_KEY` is set;
+ * otherwise logs in development when `ART_APPROVAL_OTP_DEV_LOG=true`.
+ */
+export async function sendArtApprovalOtpEmail(params: {
+  to: string;
+  otpCode: string;
+  approvalTitle: string;
+}): Promise<SendArtApprovalOtpResult> {
+  const resendKey = process.env.RESEND_API_KEY?.trim();
+  if (resendKey) {
+    const from =
+      process.env.RESEND_FROM_EMAIL?.trim() || "onboarding@resend.dev";
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from,
+        to: [params.to],
+        subject: `Your verification code: ${params.otpCode}`,
+        text: `Your verification code for "${params.approvalTitle}" is: ${params.otpCode}\n\nThis code expires in 10 minutes. If you did not request this, you can ignore this message.`,
+      }),
+    });
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`Resend email failed (${response.status}): ${body}`);
+    }
+    return { channel: "resend" };
+  }
+
+  if (process.env.ART_APPROVAL_OTP_DEV_LOG === "true") {
+    console.log(
+      `[art-approval-otp] to=${params.to} title=${JSON.stringify(params.approvalTitle)} code=${params.otpCode}`,
+    );
+    return { channel: "dev_log" };
+  }
+
+  return {
+    channel: "none",
+    error: "Verification email is not configured.",
+  };
+}

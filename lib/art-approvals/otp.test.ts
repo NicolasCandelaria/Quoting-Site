@@ -13,6 +13,8 @@ import {
   getArtApprovalOtpSecret,
   hashOtpCode,
   hashReviewToken,
+  signArtApprovalReviewSession,
+  verifyArtApprovalReviewSession,
   verifyOtpCode,
 } from "../server/art-approvals";
 
@@ -134,6 +136,44 @@ describe("ART_APPROVAL_OTP_SECRET", () => {
   });
 });
 
+describe("art approval review session cookie", () => {
+  const prevReview = process.env.ART_APPROVAL_REVIEW_SESSION_SECRET;
+
+  afterEach(() => {
+    if (prevReview === undefined) {
+      delete process.env.ART_APPROVAL_REVIEW_SESSION_SECRET;
+    } else {
+      process.env.ART_APPROVAL_REVIEW_SESSION_SECRET = prevReview;
+    }
+  });
+
+  it("round-trips signed session payload", () => {
+    process.env.ART_APPROVAL_REVIEW_SESSION_SECRET = "vitest-review-session-secret-16";
+    const token = signArtApprovalReviewSession({
+      approvalId: "00000000-0000-0000-0000-000000000001",
+      email: "client@example.com",
+      round: 2,
+    });
+    const parsed = verifyArtApprovalReviewSession(token);
+    expect(parsed).toEqual({
+      approvalId: "00000000-0000-0000-0000-000000000001",
+      email: "client@example.com",
+      round: 2,
+    });
+  });
+
+  it("rejects tampered cookie", () => {
+    process.env.ART_APPROVAL_REVIEW_SESSION_SECRET = "vitest-review-session-secret-16";
+    const token = signArtApprovalReviewSession({
+      approvalId: "a",
+      email: "x@y.z",
+      round: 1,
+    });
+    const tampered = `${token.slice(0, -4)}xxxx`;
+    expect(verifyArtApprovalReviewSession(tampered)).toBeNull();
+  });
+});
+
 describe("otp / payload validation helpers", () => {
   it("assertValidOtpCode accepts six digits only", () => {
     expect(() => assertValidOtpCode("000000")).not.toThrow();
@@ -165,6 +205,17 @@ describe("otp / payload validation helpers", () => {
   it("assertUpdateArtApprovalStatus rejects unknown status", () => {
     expect(() => assertUpdateArtApprovalStatus("draft")).not.toThrow();
     expect(() => assertUpdateArtApprovalStatus("bogus")).toThrow("Invalid art approval status");
+  });
+
+  it("requires comment when decision is changes_requested", () => {
+    expect(() =>
+      assertClientDecisionPayload({
+        decisionType: "changes_requested",
+        typedFullName: "Jane Doe",
+        confirmed: true,
+        comment: "",
+      }),
+    ).toThrow("Comment is required");
   });
 
   it("assertClientDecisionPayload enforces confirmation and comments", () => {
