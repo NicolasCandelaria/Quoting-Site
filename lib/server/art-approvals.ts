@@ -89,6 +89,7 @@ type SupabaseRowArtApproval = {
   status: string;
   round: number;
   optional_project_id: string | null;
+  optional_item_id?: string | null;
   notes: string | null;
   review_token_hash: string | null;
   ready_for_client_at: string | null;
@@ -147,6 +148,7 @@ function toSummary(row: SupabaseRowArtApproval): ArtApprovalSummary {
     status: assertStatus(row.status),
     round: row.round,
     optionalProjectId: row.optional_project_id ?? undefined,
+    optionalItemId: row.optional_item_id ?? undefined,
     notes: row.notes ?? undefined,
     reviewTokenHash: row.review_token_hash ?? undefined,
     readyForClientAt: row.ready_for_client_at ?? undefined,
@@ -262,7 +264,7 @@ export function generateReviewToken(): string {
 }
 
 const approvalSelect =
-  "id,title,client_name,status,round,optional_project_id,notes,review_token_hash,ready_for_client_at,created_by,created_at,updated_at";
+  "id,title,client_name,status,round,optional_project_id,optional_item_id,notes,review_token_hash,ready_for_client_at,created_by,created_at,updated_at";
 
 export async function listArtApprovalsFromSupabase(): Promise<ArtApprovalSummary[]> {
   const rows = await request<SupabaseRowArtApproval[]>(
@@ -309,6 +311,7 @@ export async function createArtApprovalInSupabase(
       client_name: input.clientName,
       notes: input.notes ?? null,
       optional_project_id: input.optionalProjectId ?? null,
+      optional_item_id: input.optionalItemId ?? null,
       created_by: input.createdBy,
     },
   ];
@@ -339,6 +342,9 @@ export async function updateArtApprovalInSupabase(
   if (patch.notes !== undefined) body.notes = patch.notes ?? null;
   if (patch.optionalProjectId !== undefined) {
     body.optional_project_id = patch.optionalProjectId ?? null;
+  }
+  if (patch.optionalItemId !== undefined) {
+    body.optional_item_id = patch.optionalItemId ?? null;
   }
   body.updated_at = new Date().toISOString();
 

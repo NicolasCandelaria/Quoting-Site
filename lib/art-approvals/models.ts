@@ -14,6 +14,7 @@ export type ArtApprovalSummary = {
   status: ArtApprovalStatus;
   round: number;
   optionalProjectId?: string;
+  optionalItemId?: string;
   notes?: string;
   reviewTokenHash?: string;
   readyForClientAt?: string;
@@ -64,6 +65,7 @@ export type CreateArtApprovalInput = {
   clientName: string;
   notes?: string;
   optionalProjectId?: string;
+  optionalItemId?: string;
 };
 
 export type UpdateArtApprovalInput = {
@@ -72,6 +74,7 @@ export type UpdateArtApprovalInput = {
   status?: ArtApprovalStatus;
   notes?: string;
   optionalProjectId?: string;
+  optionalItemId?: string;
 };
 
 export type UpdateArtApprovalAllowlistInput = {
