@@ -1,4 +1,6 @@
+import { createHash } from "crypto";
 import { createClient } from "@supabase/supabase-js";
+import { sanitizeStorageFileName } from "../art-approvals/validation";
 
 /**
  * Item images are stored in Supabase Storage. Create a bucket named "item-images"
@@ -9,6 +11,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const BUCKET = "item-images";
+const ART_APPROVAL_BUCKET = "art-approvals";
 
 function getClient() {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
@@ -29,6 +32,17 @@ async function ensureBucketExists(): Promise<void> {
   });
   if (error && !error.message?.toLowerCase().includes("already exists")) {
     throw new Error(`Could not create storage bucket: ${error.message}`);
+  }
+}
+
+/** Private bucket for art approval assets (served only via authorized routes). */
+async function ensureArtApprovalsBucketExists(): Promise<void> {
+  const supabase = getClient();
+  const { error } = await supabase.storage.createBucket(ART_APPROVAL_BUCKET, {
+    public: false,
+  });
+  if (error && !error.message?.toLowerCase().includes("already exists")) {
+    throw new Error(`Could not create art-approvals bucket: ${error.message}`);
   }
 }
 
@@ -132,4 +146,40 @@ export async function uploadItemImages(
 
 export function isSupabaseStorageConfigured(): boolean {
   return Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
+}
+
+/**
+ * Upload bytes for an art approval package.
+ * Path shape: `{approvalId}/{contentSha256Prefix}_{sanitizedOriginalName}` (deterministic for same bytes + name).
+ */
+export async function uploadArtApprovalFileToStorage(params: {
+  approvalId: string;
+  fileName: string;
+  bytes: ArrayBuffer;
+  contentType?: string;
+}): Promise<{ storagePath: string }> {
+  await ensureArtApprovalsBucketExists();
+  const supabase = getClient();
+  const digest = createHash("sha256")
+    .update(Buffer.from(params.bytes))
+    .digest("hex")
+    .slice(0, 24);
+  const safeName = sanitizeStorageFileName(params.fileName);
+  const storagePath = `${params.approvalId}/${digest}_${safeName}`;
+  const blob = new Blob([params.bytes], {
+    type: params.contentType || "application/octet-stream",
+  });
+
+  const { error } = await supabase.storage
+    .from(ART_APPROVAL_BUCKET)
+    .upload(storagePath, blob, {
+      contentType: params.contentType || "application/octet-stream",
+      upsert: true,
+    });
+
+  if (error) {
+    throw new Error(`Art approval file upload failed: ${error.message}`);
+  }
+
+  return { storagePath };
 }
