@@ -101,6 +101,9 @@ create table if not exists public.art_approval_client_decisions (
 create index if not exists idx_art_approval_client_decisions_timeline
   on public.art_approval_client_decisions(art_approval_id, round, decided_at desc);
 
+create unique index if not exists idx_art_approval_client_decisions_one_per_round
+  on public.art_approval_client_decisions(art_approval_id, round);
+
 alter table public.art_approval_client_decisions
   drop constraint if exists art_approval_client_decisions_check;
 

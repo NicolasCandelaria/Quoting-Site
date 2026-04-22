@@ -1,14 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import type { ArtApprovalDecisionType, ArtApprovalStatus } from "./models";
 import {
   assertAllowlistEmailArray,
   assertAllowlistEmails,
   assertClientDecisionPayload,
+  assertUpdateArtApprovalStatus,
   assertValidOtpCode,
   normalizeEmail,
 } from "./validation";
 import {
   generateNumericOtpCode,
+  getArtApprovalOtpSecret,
   hashOtpCode,
   hashReviewToken,
   verifyOtpCode,
@@ -29,6 +31,20 @@ describe("art approval model unions", () => {
 });
 
 describe("otp helpers", () => {
+  const prevSecret = process.env.ART_APPROVAL_OTP_SECRET;
+
+  beforeAll(() => {
+    process.env.ART_APPROVAL_OTP_SECRET = "vitest-art-approval-otp-secret-min-16";
+  });
+
+  afterAll(() => {
+    if (prevSecret === undefined) {
+      delete process.env.ART_APPROVAL_OTP_SECRET;
+    } else {
+      process.env.ART_APPROVAL_OTP_SECRET = prevSecret;
+    }
+  });
+
   it("verifies matching otp", async () => {
     const hash = await hashOtpCode("123456");
     const ok = await verifyOtpCode("123456", hash);
@@ -69,6 +85,53 @@ describe("otp helpers", () => {
     await expect(hashOtpCode("12")).rejects.toThrow("6-digit");
     await expect(hashOtpCode("12345a")).rejects.toThrow("6-digit");
   });
+
+  it("uses HMAC: different secrets yield different digests for same otp", async () => {
+    const saved = process.env.ART_APPROVAL_OTP_SECRET;
+    try {
+      process.env.ART_APPROVAL_OTP_SECRET = "aaaaaaaaaaaaaaaa";
+      const a = await hashOtpCode("111111");
+      process.env.ART_APPROVAL_OTP_SECRET = "bbbbbbbbbbbbbbbb";
+      const b = await hashOtpCode("111111");
+      expect(a).not.toBe(b);
+      expect(a).toMatch(/^[a-f0-9]{64}$/);
+      expect(b).toMatch(/^[a-f0-9]{64}$/);
+    } finally {
+      process.env.ART_APPROVAL_OTP_SECRET = saved;
+    }
+  });
+});
+
+describe("ART_APPROVAL_OTP_SECRET", () => {
+  const prevSecret = process.env.ART_APPROVAL_OTP_SECRET;
+
+  afterEach(() => {
+    if (prevSecret === undefined) {
+      delete process.env.ART_APPROVAL_OTP_SECRET;
+    } else {
+      process.env.ART_APPROVAL_OTP_SECRET = prevSecret;
+    }
+  });
+
+  it("getArtApprovalOtpSecret throws when unset or too short", () => {
+    delete process.env.ART_APPROVAL_OTP_SECRET;
+    expect(() => getArtApprovalOtpSecret()).toThrow("ART_APPROVAL_OTP_SECRET");
+
+    process.env.ART_APPROVAL_OTP_SECRET = "short";
+    expect(() => getArtApprovalOtpSecret()).toThrow("at least 16");
+  });
+
+  it("hashOtpCode requires secret", async () => {
+    delete process.env.ART_APPROVAL_OTP_SECRET;
+    await expect(hashOtpCode("123456")).rejects.toThrow("ART_APPROVAL_OTP_SECRET");
+  });
+
+  it("verifyOtpCode requires secret when code format is valid", async () => {
+    process.env.ART_APPROVAL_OTP_SECRET = "valid-secret-16chars";
+    const hash = await hashOtpCode("999999");
+    delete process.env.ART_APPROVAL_OTP_SECRET;
+    await expect(verifyOtpCode("999999", hash)).rejects.toThrow("ART_APPROVAL_OTP_SECRET");
+  });
 });
 
 describe("otp / payload validation helpers", () => {
@@ -97,6 +160,11 @@ describe("otp / payload validation helpers", () => {
   it("assertAllowlistEmails requires at least one entry", () => {
     expect(() => assertAllowlistEmails([])).toThrow("At least one");
     expect(() => assertAllowlistEmails(["x@y.z"])).not.toThrow();
+  });
+
+  it("assertUpdateArtApprovalStatus rejects unknown status", () => {
+    expect(() => assertUpdateArtApprovalStatus("draft")).not.toThrow();
+    expect(() => assertUpdateArtApprovalStatus("bogus")).toThrow("Invalid art approval status");
   });
 
   it("assertClientDecisionPayload enforces confirmation and comments", () => {

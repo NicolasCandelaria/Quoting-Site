@@ -1,4 +1,4 @@
-import { createHash, randomBytes, randomInt, timingSafeEqual } from "crypto";
+import { createHash, createHmac, randomBytes, randomInt, timingSafeEqual } from "crypto";
 import type {
   ArtApprovalAllowlistedEmail,
   ArtApprovalDecision,
@@ -13,6 +13,7 @@ import type {
 import {
   assertAllowlistEmailArray,
   assertClientDecisionPayload,
+  assertUpdateArtApprovalStatus,
   assertValidOtpCode,
   normalizeAllowlistEmails,
   normalizeEmail,
@@ -21,6 +22,19 @@ import { uploadArtApprovalFileToStorage } from "./supabase-storage";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+/** Thrown when Supabase REST returns a non-2xx response (includes HTTP status). */
+export class SupabaseRequestError extends Error {
+  readonly status: number;
+  readonly responseBody: string;
+
+  constructor(status: number, responseBody: string) {
+    super(`Supabase request failed (${status}): ${responseBody}`);
+    this.name = "SupabaseRequestError";
+    this.status = status;
+    this.responseBody = responseBody;
+  }
+}
 
 function assertSupabaseConfigured() {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
@@ -53,14 +67,19 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(`Supabase request failed (${response.status}): ${body}`);
+    throw new SupabaseRequestError(response.status, body);
   }
 
   if (response.status === 204) {
     return undefined as T;
   }
 
-  return (await response.json()) as T;
+  const text = await response.text();
+  if (!text) {
+    return undefined as T;
+  }
+
+  return JSON.parse(text) as T;
 }
 
 type SupabaseRowArtApproval = {
@@ -180,9 +199,29 @@ export function hashReviewToken(token: string): string {
   return createHash("sha256").update(token, "utf8").digest("hex");
 }
 
+/**
+ * Server secret for OTP at-rest hashing (HMAC-SHA256 pepper).
+ * Must be set in any environment that stores or verifies art approval OTP codes.
+ */
+export function getArtApprovalOtpSecret(): string {
+  const secret = process.env.ART_APPROVAL_OTP_SECRET?.trim();
+  if (!secret || secret.length < 16) {
+    throw new Error(
+      "ART_APPROVAL_OTP_SECRET must be set to a string of at least 16 characters to store or verify art approval OTP codes.",
+    );
+  }
+  return secret;
+}
+
+function hmacOtpDigest(otp: string): string {
+  return createHmac("sha256", getArtApprovalOtpSecret())
+    .update(otp, "utf8")
+    .digest("hex");
+}
+
 export async function hashOtpCode(otp: string): Promise<string> {
   assertValidOtpCode(otp);
-  return createHash("sha256").update(otp, "utf8").digest("hex");
+  return hmacOtpDigest(otp);
 }
 
 export async function verifyOtpCode(
@@ -195,7 +234,14 @@ export async function verifyOtpCode(
   } catch {
     return false;
   }
-  const candidate = createHash("sha256").update(otp, "utf8").digest("hex");
+  let candidate: string;
+  try {
+    candidate = hmacOtpDigest(otp);
+  } catch {
+    throw new Error(
+      "ART_APPROVAL_OTP_SECRET must be set to a string of at least 16 characters to store or verify art approval OTP codes.",
+    );
+  }
   if (candidate.length !== storedHash.length) return false;
   try {
     return timingSafeEqual(Buffer.from(candidate, "utf8"), Buffer.from(storedHash, "utf8"));
@@ -286,7 +332,10 @@ export async function updateArtApprovalInSupabase(
   const body: Record<string, unknown> = {};
   if (patch.title !== undefined) body.title = patch.title;
   if (patch.clientName !== undefined) body.client_name = patch.clientName;
-  if (patch.status !== undefined) body.status = patch.status;
+  if (patch.status !== undefined) {
+    assertUpdateArtApprovalStatus(patch.status);
+    body.status = patch.status;
+  }
   if (patch.notes !== undefined) body.notes = patch.notes ?? null;
   if (patch.optionalProjectId !== undefined) {
     body.optional_project_id = patch.optionalProjectId ?? null;
@@ -319,37 +368,48 @@ export async function loadAllowlistedEmailsForApproval(
   return rows.map(toAllowlistRow);
 }
 
-/** Replaces all allowlisted emails for an approval with the given list (normalized, deduped). */
+/**
+ * Replaces allowlisted emails with the given list (normalized, deduped).
+ * Inserts new rows first, then removes orphans, so a failed write does not wipe the list.
+ */
 export async function replaceAllowlistedEmailsForApproval(
   approvalId: string,
   emails: unknown,
 ): Promise<ArtApprovalAllowlistedEmail[]> {
   assertAllowlistEmailArray(emails);
   const normalized = normalizeAllowlistEmails(emails);
+  const current = await loadAllowlistedEmailsForApproval(approvalId);
+  const currentByEmail = new Map(current.map((r) => [r.email, r]));
 
-  await request<void>(
-    `/art_approval_allowlisted_emails?art_approval_id=eq.${approvalId}`,
-    { method: "DELETE" },
-  );
-
-  if (normalized.length === 0) {
-    return [];
+  const toAdd = normalized.filter((email) => !currentByEmail.has(email));
+  if (toAdd.length > 0) {
+    await request<SupabaseRowAllowlist[]>(
+      `/art_approval_allowlisted_emails?on_conflict=art_approval_id,email`,
+      {
+        method: "POST",
+        headers: {
+          Prefer: "resolution=ignore-duplicates,return=minimal",
+        },
+        body: JSON.stringify(
+          toAdd.map((email) => ({
+            art_approval_id: approvalId,
+            email,
+          })),
+        ),
+      },
+    );
   }
 
-  const insertRows = normalized.map((email) => ({
-    art_approval_id: approvalId,
-    email,
-  }));
+  const keep = new Set(normalized);
+  for (const row of current) {
+    if (!keep.has(row.email)) {
+      await request<void>(`/art_approval_allowlisted_emails?id=eq.${row.id}`, {
+        method: "DELETE",
+      });
+    }
+  }
 
-  const inserted = await request<SupabaseRowAllowlist[]>(
-    `/art_approval_allowlisted_emails?select=id,art_approval_id,email,created_at`,
-    {
-      method: "POST",
-      headers: { Prefer: "return=representation" },
-      body: JSON.stringify(insertRows),
-    },
-  );
-  return inserted.map(toAllowlistRow);
+  return loadAllowlistedEmailsForApproval(approvalId);
 }
 
 export async function getArtApprovalByReviewTokenHash(
@@ -451,15 +511,28 @@ export async function saveClientDecision(
     },
   ];
 
-  const decisionRows = await request<SupabaseRowDecision[]>(
-    `/art_approval_client_decisions?select=id,art_approval_id,round,decision_type,verified_email,typed_full_name,comment,decided_at`,
-    {
-      method: "POST",
-      headers: { Prefer: "return=representation" },
-      body: JSON.stringify(decisionBody),
-    },
-  );
-  const decisionRow = decisionRows[0];
+  let decisionRow: SupabaseRowDecision | undefined;
+  try {
+    const decisionRows = await request<SupabaseRowDecision[]>(
+      `/art_approval_client_decisions?select=id,art_approval_id,round,decision_type,verified_email,typed_full_name,comment,decided_at`,
+      {
+        method: "POST",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify(decisionBody),
+      },
+    );
+    decisionRow = decisionRows[0];
+  } catch (err) {
+    if (
+      err instanceof SupabaseRequestError &&
+      err.responseBody.includes("23505")
+    ) {
+      throw new Error(
+        "A client decision has already been recorded for this review round.",
+      );
+    }
+    throw err;
+  }
   if (!decisionRow) throw new Error("Failed to persist client decision.");
 
   const now = new Date().toISOString();
