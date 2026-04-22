@@ -96,3 +96,27 @@ export type VerifyOtpPayload = {
   email: string;
   otp: string;
 };
+
+export type ArtApprovalReviewContextFile = {
+  id: string;
+  originalName: string;
+  /** Present when a signed Supabase Storage URL could be created. */
+  downloadUrl?: string;
+};
+
+export type ArtApprovalReviewContextApproval = {
+  title: string;
+  clientName: string;
+  round: number;
+  status: ArtApprovalStatus;
+  files: ArtApprovalReviewContextFile[];
+  /** Non-sensitive linkage fields for the client-facing view (no internal notes). */
+  formFields: {
+    optionalProjectId?: string | null;
+    optionalItemId?: string | null;
+  };
+};
+
+export type ArtApprovalReviewContextResponse = {
+  approval: ArtApprovalReviewContextApproval;
+};

@@ -3,6 +3,7 @@ import type {
   ArtApprovalDecision,
   ArtApprovalDetail,
   ArtApprovalFile,
+  ArtApprovalReviewContextResponse,
   ClientDecisionPayload,
   CreateArtApprovalInput,
   UpdateArtApprovalInput,
@@ -102,6 +103,7 @@ export async function requestArtApprovalOtp(token: string, email: string): Promi
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
+      credentials: "include",
     },
   );
   await readJson<{ ok: boolean }>(response);
@@ -122,6 +124,21 @@ export async function verifyArtApprovalOtp(
     },
   );
   await readJson<{ ok: boolean }>(response);
+}
+
+export async function fetchArtApprovalReviewContext(
+  token: string,
+): Promise<ArtApprovalReviewContextResponse> {
+  const response = await fetch(
+    `/api/art-approvals/review/${encodeURIComponent(token)}/context`,
+    { credentials: "include", cache: "no-store" },
+  );
+  const body = (await response.json()) as ArtApprovalReviewContextResponse & { error?: string };
+  if (!response.ok) {
+    const message = body.error || `Request failed (${response.status})`;
+    throw new Error(message);
+  }
+  return body;
 }
 
 export async function submitArtApprovalDecision(

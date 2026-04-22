@@ -183,3 +183,22 @@ export async function uploadArtApprovalFileToStorage(params: {
 
   return { storagePath };
 }
+
+/** Short-lived signed URL for a private object in the `art-approvals` bucket. */
+export async function createSignedArtApprovalDownloadUrl(
+  storagePath: string,
+  expiresInSec: number = 3600,
+): Promise<string | null> {
+  if (!isSupabaseStorageConfigured()) {
+    return null;
+  }
+  const supabase = getClient();
+  const { data, error } = await supabase.storage
+    .from(ART_APPROVAL_BUCKET)
+    .createSignedUrl(storagePath, expiresInSec);
+  if (error || !data?.signedUrl) {
+    console.error("[storage] art-approval signed URL failed", error?.message ?? error);
+    return null;
+  }
+  return data.signedUrl;
+}
