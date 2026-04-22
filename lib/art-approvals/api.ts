@@ -1,6 +1,5 @@
 import type {
   ArtApproval,
-  ArtApprovalAllowlistedEmail,
   ArtApprovalDecision,
   ArtApprovalDetail,
   ClientDecisionPayload,
@@ -71,14 +70,14 @@ export async function markArtApprovalReadyForClient(approvalId: string): Promise
 export async function updateArtApprovalAllowlist(
   approvalId: string,
   emails: string[],
-): Promise<ArtApprovalAllowlistedEmail[]> {
+): Promise<ArtApprovalDetail> {
   const response = await fetch(`/api/art-approvals/${approvalId}/allowlist`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ emails }),
   });
-  const body = await readJson<{ allowlistedEmails: ArtApprovalAllowlistedEmail[] }>(response);
-  return body.allowlistedEmails;
+  const body = await readJson<{ approval: ArtApprovalDetail }>(response);
+  return body.approval;
 }
 
 export async function requestArtApprovalOtp(token: string, email: string): Promise<void> {
