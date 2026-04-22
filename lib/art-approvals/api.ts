@@ -115,11 +115,12 @@ export async function verifyArtApprovalOtp(
 export async function submitArtApprovalDecision(
   token: string,
   input: ClientDecisionPayload,
-): Promise<{ approval: ArtApprovalDetail }> {
+): Promise<ArtApprovalDetail> {
   const response = await fetch(`/api/art-approvals/review/${token}/decision`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
-  return readJson<{ approval: ArtApprovalDetail }>(response);
+  const body = await readJson<{ approval: ArtApprovalDetail }>(response);
+  return body.approval;
 }

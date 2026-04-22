@@ -22,6 +22,8 @@ export type ArtApprovalSummary = {
   updatedAt: string;
 };
 
+export type ArtApproval = ArtApprovalSummary;
+
 export type ArtApprovalAllowlistedEmail = {
   id: string;
   artApprovalId: string;
