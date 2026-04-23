@@ -89,3 +89,15 @@ export async function removeItem(
   const body = await readJson<{ project: Project }>(response);
   return body.project;
 }
+
+export {
+  createArtApproval,
+  fetchArtApproval,
+  fetchArtApprovals,
+  markArtApprovalReadyForClient,
+  requestArtApprovalOtp,
+  submitArtApprovalDecision,
+  updateArtApproval,
+  updateArtApprovalAllowlist,
+  verifyArtApprovalOtp,
+} from "@/lib/art-approvals/api";
