@@ -4,7 +4,6 @@ import { normalizeEmail } from "@/lib/art-approvals/validation";
 
 import {
   ART_APPROVAL_OTP_CHALLENGE_TTL_MS,
-  deleteArtApprovalOtpChallengeById,
   generateNumericOtpCode,
   getArtApprovalReadyForClientByRawToken,
   getOtpSendCooldownRemainingMs,
@@ -104,33 +103,21 @@ export async function POST(
   });
   const magicLinkUrl = `${origin}/api/art-approvals/review/${encodeURIComponent(token)}/email-link?s=${encodeURIComponent(signed)}`;
 
-  let deliveryChannel: "resend" | "server_log";
-  try {
-    const sent = await sendArtApprovalOtpEmail({
-      to: email,
-      otpCode: otp,
-      approvalTitle: approval.title,
-      magicLinkUrl,
-    });
-    deliveryChannel = sent.channel;
-  } catch (error) {
-    console.error("[art-approval] OTP delivery failed after challenge insert", error);
-    try {
-      await deleteArtApprovalOtpChallengeById(challengeId);
-    } catch (cleanupError) {
-      console.error(
-        "[art-approval] Failed to delete OTP challenge after delivery failure",
-        cleanupError,
-      );
-    }
-    return NextResponse.json(
-      { error: "Verification could not be completed." },
-      { status: 502 },
-    );
-  }
+  const sent = await sendArtApprovalOtpEmail({
+    to: email,
+    otpCode: otp,
+    approvalTitle: approval.title,
+    magicLinkUrl,
+  });
+
+  const notice =
+    sent.channel === "server_log" && sent.resendFailed
+      ? "Email could not be sent (see Vercel logs for Resend errors). Your project team can share the sign-in link and code from application logs."
+      : undefined;
 
   return NextResponse.json({
     ok: true,
-    delivery: deliveryChannel === "resend" ? "email" : "log",
+    delivery: sent.channel === "resend" ? "email" : "log",
+    ...(notice ? { notice } : {}),
   });
 }
