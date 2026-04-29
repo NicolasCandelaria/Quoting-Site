@@ -44,6 +44,7 @@ function ClientArtReviewInner() {
   const [contextLoading, setContextLoading] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(true);
   const [lastDelivery, setLastDelivery] = useState<"email" | "log" | null>(null);
+  const [otpNotice, setOtpNotice] = useState<string | null>(null);
   const [completed, setCompleted] = useState<{
     approval: ArtApproval;
     decision: ArtApprovalDecision;
@@ -123,8 +124,9 @@ function ClientArtReviewInner() {
     setError("");
     setBusy(true);
     try {
-      const delivery = await requestArtApprovalOtp(token, email);
+      const { delivery, notice } = await requestArtApprovalOtp(token, email);
       setLastDelivery(delivery);
+      setOtpNotice(notice ?? null);
       setStage("otp");
       setOtpCode("");
     } catch (err) {
@@ -230,6 +232,11 @@ function ClientArtReviewInner() {
                 {error}
               </p>
             ) : null}
+            {otpNotice ? (
+              <p className="text-body text-amber-800 bg-amber-50 border border-amber-200/80 rounded-button px-3 py-2" role="status">
+                {otpNotice}
+              </p>
+            ) : null}
             {lastDelivery === "email" ? (
               <p className="text-body text-text-secondary">
                 Check <span className="font-medium">{email}</span> for a sign-in link (open it on
@@ -271,6 +278,7 @@ function ClientArtReviewInner() {
                   setStage("email");
                   setError("");
                   setLastDelivery(null);
+                  setOtpNotice(null);
                 }}
               >
                 Use a different email

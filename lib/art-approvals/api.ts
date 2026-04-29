@@ -105,10 +105,15 @@ export async function updateArtApprovalAllowlist(
   return body.approval;
 }
 
+export type RequestArtApprovalOtpResult = {
+  delivery: "email" | "log";
+  notice?: string;
+};
+
 export async function requestArtApprovalOtp(
   token: string,
   email: string,
-): Promise<"email" | "log"> {
+): Promise<RequestArtApprovalOtpResult> {
   const response = await fetch(
     `/api/art-approvals/review/${encodeURIComponent(token)}/otp/request`,
     {
@@ -118,8 +123,15 @@ export async function requestArtApprovalOtp(
       credentials: "include",
     },
   );
-  const body = await readJson<{ ok: boolean; delivery?: "email" | "log" }>(response);
-  return body.delivery === "email" ? "email" : "log";
+  const body = await readJson<{
+    ok: boolean;
+    delivery?: "email" | "log";
+    notice?: string;
+  }>(response);
+  return {
+    delivery: body.delivery === "email" ? "email" : "log",
+    ...(body.notice ? { notice: body.notice } : {}),
+  };
 }
 
 export async function verifyArtApprovalOtp(

@@ -986,11 +986,22 @@ export function verifyArtApprovalReviewSession(
 
 export type SendArtApprovalOtpResult =
   | { channel: "resend" }
-  | { channel: "server_log" };
+  | { channel: "server_log"; resendFailed?: boolean };
+
+function logArtApprovalOtpForOperators(params: {
+  to: string;
+  otpCode: string;
+  approvalTitle: string;
+  magicLinkUrl: string;
+}): void {
+  console.log(
+    `[art-approval-otp] to=${params.to} title=${JSON.stringify(params.approvalTitle)} code=${params.otpCode} magicLink=${params.magicLinkUrl}`,
+  );
+}
 
 /**
- * Sends verification for art approval review: optional Resend email with a one-click link plus
- * the 6-digit code; otherwise logs link and code for operators (same as AM magic link when Resend is set).
+ * Sends verification for art approval review: tries Resend when `RESEND_API_KEY` is set; on any
+ * Resend failure falls back to server logs so the OTP challenge is still usable (same link + code).
  */
 export async function sendArtApprovalOtpEmail(params: {
   to: string;
@@ -1011,28 +1022,39 @@ export async function sendArtApprovalOtpEmail(params: {
       `Title: ${params.approvalTitle}`,
       `This link and code expire in 10 minutes.`,
     ].join("\n");
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from,
-        to: [params.to],
-        subject: `Sign in to review: ${params.approvalTitle}`,
-        text,
-      }),
-    });
-    if (!response.ok) {
-      const body = await response.text();
-      throw new Error(`Resend email failed (${response.status}): ${body}`);
+    try {
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${resendKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from,
+          to: [params.to],
+          subject: `Sign in to review: ${params.approvalTitle}`,
+          text,
+        }),
+      });
+      if (response.ok) {
+        return { channel: "resend" };
+      }
+      const errBody = await response.text();
+      console.error(
+        "[art-approval] Resend returned error; falling back to server log for OTP",
+        response.status,
+        errBody,
+      );
+    } catch (err) {
+      console.error(
+        "[art-approval] Resend request failed; falling back to server log for OTP",
+        err,
+      );
     }
-    return { channel: "resend" };
+    logArtApprovalOtpForOperators(params);
+    return { channel: "server_log", resendFailed: true };
   }
 
-  console.log(
-    `[art-approval-otp] to=${params.to} title=${JSON.stringify(params.approvalTitle)} code=${params.otpCode} magicLink=${params.magicLinkUrl}`,
-  );
+  logArtApprovalOtpForOperators(params);
   return { channel: "server_log" };
 }
