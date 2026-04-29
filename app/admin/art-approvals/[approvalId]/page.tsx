@@ -365,10 +365,6 @@ export default function ArtApprovalDetailPage() {
       {lastReviewToken && reviewUrl && (
         <section className="card max-w-2xl border-amber-200 bg-amber-50/40">
           <h2 className="text-subsection-title font-semibold text-text-primary">Client review link</h2>
-          <p className="mt-2 text-body text-text-secondary">
-            Copy the full URL below and send it to your client. The token is only shown here right
-            after you mark the approval ready; keep it somewhere safe if you need it again.
-          </p>
           <p className="mt-3 break-all rounded-panel border border-slate-200 bg-white px-3 py-2 font-mono text-caption text-text-primary">
             {reviewUrl}
           </p>
@@ -442,15 +438,15 @@ export default function ArtApprovalDetailPage() {
         )}
       </section>
 
-      <section className="card max-w-2xl border border-status-error/30 bg-status-error/5">
-        <h2 className="text-subsection-title font-semibold text-status-error">Danger zone</h2>
+      <section className="card max-w-2xl border-status-error/30">
+        <h2 className="text-subsection-title font-semibold text-text-primary">Danger zone</h2>
         <p className="mt-1 text-body text-text-secondary">
           Permanently remove this art approval and all related allowlist entries, files, OTP
           challenges, and client decisions.
         </p>
         <button
           type="button"
-          className="btn-secondary mt-4 border-status-error/40 text-status-error hover:bg-status-error/10"
+          className="mt-3 text-body font-medium text-status-error hover:underline"
           disabled={deleting}
           onClick={() => void handleDeleteApproval()}
         >
