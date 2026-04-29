@@ -986,7 +986,20 @@ export function verifyArtApprovalReviewSession(
 
 export type SendArtApprovalOtpResult =
   | { channel: "resend" }
-  | { channel: "server_log"; resendFailed?: boolean };
+  | { channel: "server_log"; resendFailed?: boolean; resendMessage?: string };
+
+function extractResendApiErrorMessage(errBody: string): string | undefined {
+  try {
+    const j = JSON.parse(errBody) as { message?: unknown };
+    if (typeof j.message === "string" && j.message.trim()) {
+      const t = j.message.trim();
+      return t.length > 500 ? `${t.slice(0, 497)}…` : t;
+    }
+  } catch {
+    /* not JSON */
+  }
+  return undefined;
+}
 
 function logArtApprovalOtpForOperators(params: {
   to: string;
@@ -1040,19 +1053,33 @@ export async function sendArtApprovalOtpEmail(params: {
         return { channel: "resend" };
       }
       const errBody = await response.text();
+      const resendMessage = extractResendApiErrorMessage(errBody);
       console.error(
         "[art-approval] Resend returned error; falling back to server log for OTP",
         response.status,
         errBody,
       );
+      logArtApprovalOtpForOperators(params);
+      return {
+        channel: "server_log",
+        resendFailed: true,
+        ...(resendMessage ? { resendMessage } : {}),
+      };
     } catch (err) {
       console.error(
         "[art-approval] Resend request failed; falling back to server log for OTP",
         err,
       );
+      logArtApprovalOtpForOperators(params);
+      return {
+        channel: "server_log",
+        resendFailed: true,
+        resendMessage:
+          err instanceof Error && err.message
+            ? `Could not reach Resend: ${err.message}`
+            : undefined,
+      };
     }
-    logArtApprovalOtpForOperators(params);
-    return { channel: "server_log", resendFailed: true };
   }
 
   logArtApprovalOtpForOperators(params);

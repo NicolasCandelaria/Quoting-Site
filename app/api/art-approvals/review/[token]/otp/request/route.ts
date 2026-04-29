@@ -112,7 +112,9 @@ export async function POST(
 
   const notice =
     sent.channel === "server_log" && sent.resendFailed
-      ? "Email could not be sent (see Vercel logs for Resend errors). Your project team can share the sign-in link and code from application logs."
+      ? sent.resendMessage
+        ? `${sent.resendMessage} Link and code are also in application logs for your team.`
+        : "Email could not be sent. Check Vercel logs for details; your team can share the link and code from application logs."
       : undefined;
 
   return NextResponse.json({
