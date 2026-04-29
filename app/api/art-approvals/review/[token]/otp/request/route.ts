@@ -11,6 +11,7 @@ import {
   insertArtApprovalOtpChallenge,
   isEmailAllowlistedForArtApproval,
   sendArtApprovalOtpEmail,
+  signArtApprovalReviewMagicLink,
 } from "@/lib/server/art-approvals";
 
 import { isSupabaseConfigured } from "@/lib/server/supabase";
@@ -94,12 +95,24 @@ export async function POST(
     throw error;
   }
 
+  const origin = new URL(request.url).origin;
+  const expUnixSec = Math.floor(new Date(expiresAt).getTime() / 1000);
+  const signed = signArtApprovalReviewMagicLink({
+    challengeId,
+    email,
+    expUnixSec,
+  });
+  const magicLinkUrl = `${origin}/api/art-approvals/review/${encodeURIComponent(token)}/email-link?s=${encodeURIComponent(signed)}`;
+
+  let deliveryChannel: "resend" | "server_log";
   try {
-    await sendArtApprovalOtpEmail({
+    const sent = await sendArtApprovalOtpEmail({
       to: email,
       otpCode: otp,
       approvalTitle: approval.title,
+      magicLinkUrl,
     });
+    deliveryChannel = sent.channel;
   } catch (error) {
     console.error("[art-approval] OTP delivery failed after challenge insert", error);
     try {
@@ -116,5 +129,8 @@ export async function POST(
     );
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({
+    ok: true,
+    delivery: deliveryChannel === "resend" ? "email" : "log",
+  });
 }

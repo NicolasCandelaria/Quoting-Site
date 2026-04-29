@@ -13,7 +13,9 @@ import {
   getArtApprovalOtpSecret,
   hashOtpCode,
   hashReviewToken,
+  signArtApprovalReviewMagicLink,
   signArtApprovalReviewSession,
+  verifyArtApprovalReviewMagicLink,
   verifyArtApprovalReviewSession,
   verifyOtpCode,
 } from "../server/art-approvals";
@@ -74,6 +76,28 @@ describe("otp helpers", () => {
     const t = "sample-review-token";
     expect(hashReviewToken(t)).toBe(hashReviewToken(t));
     expect(hashReviewToken(t)).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it("round-trips art approval email magic link payload", () => {
+    const exp = Math.floor(Date.now() / 1000) + 600;
+    const signed = signArtApprovalReviewMagicLink({
+      challengeId: "550e8400-e29b-41d4-a716-446655440000",
+      email: "Client@Example.com",
+      expUnixSec: exp,
+    });
+    const parsed = verifyArtApprovalReviewMagicLink(signed);
+    expect(parsed?.cid).toBe("550e8400-e29b-41d4-a716-446655440000");
+    expect(parsed?.email).toBe("client@example.com");
+    expect(parsed?.exp).toBe(exp);
+  });
+
+  it("rejects expired art approval magic link", () => {
+    const signed = signArtApprovalReviewMagicLink({
+      challengeId: "id",
+      email: "a@b.co",
+      expUnixSec: Math.floor(Date.now() / 1000) - 60,
+    });
+    expect(verifyArtApprovalReviewMagicLink(signed)).toBeNull();
   });
 
   it("generates six-digit numeric codes", () => {
