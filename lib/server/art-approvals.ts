@@ -365,6 +365,12 @@ export async function updateArtApprovalInSupabase(
   return toSummary(row);
 }
 
+export async function deleteArtApprovalInSupabase(approvalId: string): Promise<void> {
+  await request<void>(`/art_approvals?id=eq.${approvalId}`, {
+    method: "DELETE",
+  });
+}
+
 export async function loadAllowlistedEmailsForApproval(
   approvalId: string,
 ): Promise<ArtApprovalAllowlistedEmail[]> {

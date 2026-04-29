@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { UpdateArtApprovalInput } from "@/lib/art-approvals/models";
 import { getSessionUser, isEmailApproved } from "@/lib/server/auth";
 import {
+  deleteArtApprovalInSupabase,
   getArtApprovalFromSupabase,
   updateArtApprovalInSupabase,
 } from "@/lib/server/art-approvals";
@@ -204,4 +205,33 @@ export async function POST(
 
   const { approvalId } = await context.params;
   return handleUpdate(request, approvalId);
+}
+
+export async function DELETE(
+  _request: Request,
+  context: { params: Promise<{ approvalId: string }> },
+) {
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json(
+      { error: "Supabase is not configured." },
+      { status: 500 },
+    );
+  }
+
+  const user = await getSessionUser();
+  if (!user?.email) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  if (!(await isEmailApproved(user.email))) {
+    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+  }
+
+  const { approvalId } = await context.params;
+  const current = await getArtApprovalFromSupabase(approvalId);
+  if (!current) {
+    return NextResponse.json({ error: "Art approval not found." }, { status: 404 });
+  }
+
+  await deleteArtApprovalInSupabase(approvalId);
+  return new NextResponse(null, { status: 204 });
 }

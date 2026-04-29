@@ -59,6 +59,15 @@ export async function updateArtApproval(
   return body.approval;
 }
 
+export async function deleteArtApproval(approvalId: string): Promise<void> {
+  const response = await fetch(`/api/art-approvals/${approvalId}`, {
+    method: "DELETE",
+  });
+  if (response.status === 204) return;
+  const body = (await response.json()) as { error?: string };
+  throw new Error(body.error ?? `Request failed (${response.status})`);
+}
+
 export async function markArtApprovalReadyForClient(approvalId: string): Promise<{
   approval: ArtApprovalDetail;
   reviewToken: string;

@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { AllowlistEditor } from "@/components/art-approvals/AllowlistEditor";
 import { ArtApprovalForm, type ArtApprovalFormValues } from "@/components/art-approvals/ArtApprovalForm";
 import { ArtApprovalStatusBadge } from "@/components/art-approvals/ArtApprovalStatusBadge";
 import {
+  deleteArtApproval,
   fetchArtApproval,
   markArtApprovalReadyForClient,
   updateArtApproval,
@@ -33,7 +34,9 @@ function emptyForm(approval: ArtApprovalDetail): ArtApprovalFormValues {
 
 export default function ArtApprovalDetailPage() {
   const params = useParams<{ approvalId: string }>();
+  const router = useRouter();
   const approvalId = params.approvalId;
+  const reviewTokenStorageKey = `art-approval-review-token:${approvalId}`;
 
   const [approval, setApproval] = useState<ArtApprovalDetail | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -45,6 +48,7 @@ export default function ArtApprovalDetailPage() {
   const [allowlistSaving, setAllowlistSaving] = useState(false);
   const [readySaving, setReadySaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [lastReviewToken, setLastReviewToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -58,6 +62,13 @@ export default function ArtApprovalDetailPage() {
     }
     return row;
   }, [approvalId]);
+
+  useEffect(() => {
+    const savedToken = window.localStorage.getItem(reviewTokenStorageKey);
+    if (savedToken) {
+      setLastReviewToken(savedToken);
+    }
+  }, [reviewTokenStorageKey]);
 
   useEffect(() => {
     const load = async () => {
@@ -80,6 +91,12 @@ export default function ArtApprovalDetailPage() {
     };
     void load();
   }, [approvalId]);
+
+  useEffect(() => {
+    if (lastReviewToken) {
+      window.localStorage.setItem(reviewTokenStorageKey, lastReviewToken);
+    }
+  }, [lastReviewToken, reviewTokenStorageKey]);
 
   const readOnly = approval?.status === "approved";
 
@@ -172,6 +189,23 @@ export default function ArtApprovalDetailPage() {
       setError(err instanceof Error ? err.message : "Could not mark ready for client.");
     } finally {
       setReadySaving(false);
+    }
+  };
+
+  const handleDeleteApproval = async () => {
+    const confirmed = window.confirm(
+      "Delete this art approval permanently? This cannot be undone.",
+    );
+    if (!confirmed) return;
+    setDeleting(true);
+    setError("");
+    try {
+      await deleteArtApproval(approvalId);
+      window.localStorage.removeItem(reviewTokenStorageKey);
+      router.push("/admin/art-approvals");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not delete art approval.");
+      setDeleting(false);
     }
   };
 
@@ -406,6 +440,22 @@ export default function ArtApprovalDetailPage() {
             ))}
           </ol>
         )}
+      </section>
+
+      <section className="card max-w-2xl border border-status-error/30 bg-status-error/5">
+        <h2 className="text-subsection-title font-semibold text-status-error">Danger zone</h2>
+        <p className="mt-1 text-body text-text-secondary">
+          Permanently remove this art approval and all related allowlist entries, files, OTP
+          challenges, and client decisions.
+        </p>
+        <button
+          type="button"
+          className="btn-secondary mt-4 border-status-error/40 text-status-error hover:bg-status-error/10"
+          disabled={deleting}
+          onClick={() => void handleDeleteApproval()}
+        >
+          {deleting ? "Deleting…" : "Delete art approval"}
+        </button>
       </section>
     </div>
   );
