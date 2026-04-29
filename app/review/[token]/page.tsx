@@ -108,7 +108,8 @@ export default function ClientArtReviewPage() {
       <div className="card">
         <h1 className="text-section-title font-semibold text-text-primary">Art approval review</h1>
         <p className="mt-2 text-body text-text-secondary">
-          Verify your email, then review the materials and record your decision.
+          Confirm your allowlisted work email, enter the verification code your project team shares
+          with you (from application logs), then review the materials and record your decision.
         </p>
 
         {completed ? (
@@ -155,7 +156,8 @@ export default function ClientArtReviewPage() {
               </p>
             ) : null}
             <p className="text-body text-text-secondary">
-              Enter the 6-digit code sent to <span className="font-medium">{email}</span>.
+              Enter the 6-digit code for <span className="font-medium">{email}</span> (your project
+              contact retrieves it from application logs).
             </p>
             <div>
               <label className="label" htmlFor="review-otp">

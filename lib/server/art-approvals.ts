@@ -872,53 +872,19 @@ export function verifyArtApprovalReviewSession(
   };
 }
 
-export type SendArtApprovalOtpResult =
-  | { channel: "resend" }
-  | { channel: "dev_log" }
-  | { channel: "none"; error: string };
+export type SendArtApprovalOtpResult = { channel: "server_log" };
 
 /**
- * Delivers a one-time code for art approval review. Prefers Resend when `RESEND_API_KEY` is set;
- * otherwise logs in development when `ART_APPROVAL_OTP_DEV_LOG=true`.
+ * Records OTP delivery for art approval review. Codes are written to server logs so operators
+ * can share them with the client; there is no outbound email integration in this build.
  */
 export async function sendArtApprovalOtpEmail(params: {
   to: string;
   otpCode: string;
   approvalTitle: string;
 }): Promise<SendArtApprovalOtpResult> {
-  const resendKey = process.env.RESEND_API_KEY?.trim();
-  if (resendKey) {
-    const from =
-      process.env.RESEND_FROM_EMAIL?.trim() || "onboarding@resend.dev";
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from,
-        to: [params.to],
-        subject: `Your verification code: ${params.otpCode}`,
-        text: `Your verification code for "${params.approvalTitle}" is: ${params.otpCode}\n\nThis code expires in 10 minutes. If you did not request this, you can ignore this message.`,
-      }),
-    });
-    if (!response.ok) {
-      const body = await response.text();
-      throw new Error(`Resend email failed (${response.status}): ${body}`);
-    }
-    return { channel: "resend" };
-  }
-
-  if (process.env.ART_APPROVAL_OTP_DEV_LOG === "true") {
-    console.log(
-      `[art-approval-otp] to=${params.to} title=${JSON.stringify(params.approvalTitle)} code=${params.otpCode}`,
-    );
-    return { channel: "dev_log" };
-  }
-
-  return {
-    channel: "none",
-    error: "Verification email is not configured.",
-  };
+  console.log(
+    `[art-approval-otp] to=${params.to} title=${JSON.stringify(params.approvalTitle)} code=${params.otpCode}`,
+  );
+  return { channel: "server_log" };
 }
