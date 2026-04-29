@@ -105,7 +105,10 @@ export async function updateArtApprovalAllowlist(
   return body.approval;
 }
 
-export async function requestArtApprovalOtp(token: string, email: string): Promise<void> {
+export async function requestArtApprovalOtp(
+  token: string,
+  email: string,
+): Promise<"email" | "log"> {
   const response = await fetch(
     `/api/art-approvals/review/${encodeURIComponent(token)}/otp/request`,
     {
@@ -115,7 +118,8 @@ export async function requestArtApprovalOtp(token: string, email: string): Promi
       credentials: "include",
     },
   );
-  await readJson<{ ok: boolean }>(response);
+  const body = await readJson<{ ok: boolean; delivery?: "email" | "log" }>(response);
+  return body.delivery === "email" ? "email" : "log";
 }
 
 export async function verifyArtApprovalOtp(

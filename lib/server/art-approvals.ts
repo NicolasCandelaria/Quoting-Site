@@ -758,6 +758,118 @@ export async function fetchLatestOpenOtpChallenge(
   return rows[0];
 }
 
+export async function fetchOtpChallengeById(
+  challengeId: string,
+): Promise<SupabaseRowOtpChallenge | undefined> {
+  const rows = await request<SupabaseRowOtpChallenge[]>(
+    `/art_approval_otp_challenges?select=id,art_approval_id,email,otp_hash,expires_at,consumed_at,attempts,created_at&id=eq.${challengeId}&limit=1`,
+  );
+  return rows[0];
+}
+
+type ArtApprovalReviewMagicLinkEnvelope = {
+  v: 1;
+  cid: string;
+  email: string;
+  exp: number;
+};
+
+/** Signed payload for one-click email verification (consumes the same OTP challenge row). */
+export function signArtApprovalReviewMagicLink(params: {
+  challengeId: string;
+  email: string;
+  expUnixSec: number;
+}): string {
+  const secret = getArtApprovalOtpSecret();
+  const envelope: ArtApprovalReviewMagicLinkEnvelope = {
+    v: 1,
+    cid: params.challengeId,
+    email: normalizeEmail(params.email),
+    exp: params.expUnixSec,
+  };
+  const payloadB64 = Buffer.from(JSON.stringify(envelope), "utf8").toString("base64url");
+  const sig = createHmac("sha256", secret).update(payloadB64).digest("base64url");
+  return `${payloadB64}.${sig}`;
+}
+
+export function verifyArtApprovalReviewMagicLink(
+  signed: string | null | undefined,
+): ArtApprovalReviewMagicLinkEnvelope | null {
+  if (!signed?.trim()) return null;
+  let secret: string;
+  try {
+    secret = getArtApprovalOtpSecret();
+  } catch {
+    return null;
+  }
+  const dot = signed.indexOf(".");
+  if (dot <= 0) return null;
+  const payloadB64 = signed.slice(0, dot);
+  const sig = signed.slice(dot + 1);
+  if (!payloadB64 || !sig) return null;
+  const expected = createHmac("sha256", secret).update(payloadB64).digest("base64url");
+  if (expected.length !== sig.length) return null;
+  try {
+    if (!timingSafeEqual(Buffer.from(sig, "utf8"), Buffer.from(expected, "utf8"))) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+  let parsed: ArtApprovalReviewMagicLinkEnvelope;
+  try {
+    parsed = JSON.parse(Buffer.from(payloadB64, "base64url").toString("utf8"));
+  } catch {
+    return null;
+  }
+  if (parsed.v !== 1 || typeof parsed.cid !== "string") return null;
+  if (typeof parsed.email !== "string" || typeof parsed.exp !== "number") return null;
+  if (parsed.exp < Math.floor(Date.now() / 1000)) return null;
+  return parsed;
+}
+
+export type ArtApprovalOtpChallengeCompletableReason =
+  | "ok"
+  | "expired"
+  | "consumed"
+  | "mismatch"
+  | "too_many_attempts";
+
+export function getOtpChallengeCompletableState(
+  challenge: SupabaseRowOtpChallenge,
+  approval: ArtApprovalSummary,
+  email: string,
+): ArtApprovalOtpChallengeCompletableReason {
+  const ne = normalizeEmail(email);
+  if (normalizeEmail(challenge.email) !== ne) return "mismatch";
+  if (challenge.art_approval_id !== approval.id) return "mismatch";
+  if (challenge.consumed_at) return "consumed";
+  if (challenge.attempts >= ART_APPROVAL_MAX_OTP_VERIFY_ATTEMPTS) {
+    return "too_many_attempts";
+  }
+  const exp = new Date(challenge.expires_at).getTime();
+  if (Number.isNaN(exp) || exp <= Date.now()) return "expired";
+  return "ok";
+}
+
+/**
+ * Consumes an open OTP challenge and returns a signed review session value (cookie payload).
+ */
+export async function consumeOtpChallengeAndSignReviewSession(params: {
+  challengeId: string;
+  approval: ArtApprovalSummary;
+  email: string;
+}): Promise<{ ok: true; sessionValue: string } | { ok: false }> {
+  const consumed = await consumeArtApprovalOtpChallengeIfOpen(params.challengeId);
+  if (!consumed) return { ok: false };
+  const sessionValue = signArtApprovalReviewSession({
+    approvalId: params.approval.id,
+    email: normalizeEmail(params.email),
+    round: params.approval.round,
+  });
+  return { ok: true, sessionValue };
+}
+
 export async function deleteArtApprovalOtpChallengeById(
   challengeId: string,
 ): Promise<void> {
@@ -872,19 +984,55 @@ export function verifyArtApprovalReviewSession(
   };
 }
 
-export type SendArtApprovalOtpResult = { channel: "server_log" };
+export type SendArtApprovalOtpResult =
+  | { channel: "resend" }
+  | { channel: "server_log" };
 
 /**
- * Records OTP delivery for art approval review. Codes are written to server logs so operators
- * can share them with the client; there is no outbound email integration in this build.
+ * Sends verification for art approval review: optional Resend email with a one-click link plus
+ * the 6-digit code; otherwise logs link and code for operators (same as AM magic link when Resend is set).
  */
 export async function sendArtApprovalOtpEmail(params: {
   to: string;
   otpCode: string;
   approvalTitle: string;
+  magicLinkUrl: string;
 }): Promise<SendArtApprovalOtpResult> {
+  const resendKey = process.env.RESEND_API_KEY?.trim();
+  if (resendKey) {
+    const from =
+      process.env.RESEND_FROM_EMAIL?.trim() || "onboarding@resend.dev";
+    const text = [
+      `Open this link to access the art approval review (same as signing in from your email):`,
+      params.magicLinkUrl,
+      ``,
+      `Or go to the review page and enter this 6-digit code: ${params.otpCode}`,
+      ``,
+      `Title: ${params.approvalTitle}`,
+      `This link and code expire in 10 minutes.`,
+    ].join("\n");
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from,
+        to: [params.to],
+        subject: `Sign in to review: ${params.approvalTitle}`,
+        text,
+      }),
+    });
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`Resend email failed (${response.status}): ${body}`);
+    }
+    return { channel: "resend" };
+  }
+
   console.log(
-    `[art-approval-otp] to=${params.to} title=${JSON.stringify(params.approvalTitle)} code=${params.otpCode}`,
+    `[art-approval-otp] to=${params.to} title=${JSON.stringify(params.approvalTitle)} code=${params.otpCode} magicLink=${params.magicLinkUrl}`,
   );
   return { channel: "server_log" };
 }

@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { type FormEvent, useEffect, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { type FormEvent, Suspense, useEffect, useRef, useState } from "react";
 
 import { ReviewDecisionForm } from "@/components/art-approvals/ReviewDecisionForm";
 import {
@@ -18,8 +18,21 @@ import type {
 
 type Stage = "email" | "otp" | "review";
 
-export default function ClientArtReviewPage() {
+const MAGIC_LINK_ERROR_MESSAGES: Record<string, string> = {
+  magic_invalid:
+    "This sign-in link is invalid or does not match this review. Request a new link from the page below.",
+  magic_expired:
+    "This sign-in link has expired. Enter your email again to receive a new link or code.",
+  magic_used:
+    "This sign-in link was already used. Request a new link if you need to sign in again.",
+  magic_attempts:
+    "Too many incorrect code attempts. Request a new sign-in link or code from the page below.",
+};
+
+function ClientArtReviewInner() {
   const params = useParams<{ token: string }>();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const token = typeof params?.token === "string" ? params.token : "";
 
   const [stage, setStage] = useState<Stage>("email");
@@ -29,13 +42,58 @@ export default function ClientArtReviewPage() {
   const [error, setError] = useState("");
   const [reviewContext, setReviewContext] = useState<ArtApprovalReviewContextResponse | null>(null);
   const [contextLoading, setContextLoading] = useState(false);
+  const [bootstrapping, setBootstrapping] = useState(true);
+  const [lastDelivery, setLastDelivery] = useState<"email" | "log" | null>(null);
   const [completed, setCompleted] = useState<{
     approval: ArtApproval;
     decision: ArtApprovalDecision;
   } | null>(null);
+  /** Skip one context fetch when bootstrap already loaded review data (e.g. magic link). */
+  const skipNextReviewContextFetchRef = useRef(false);
+
+  useEffect(() => {
+    skipNextReviewContextFetchRef.current = false;
+  }, [token]);
+
+  useEffect(() => {
+    const code = searchParams.get("error");
+    if (!code || !token) return;
+    setError(MAGIC_LINK_ERROR_MESSAGES[code] ?? "Sign-in link could not be used.");
+    router.replace(`/review/${encodeURIComponent(token)}`, { scroll: false });
+  }, [searchParams, router, token]);
+
+  useEffect(() => {
+    if (!token) {
+      setBootstrapping(false);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const ctx = await fetchArtApprovalReviewContext(token);
+        if (!cancelled) {
+          skipNextReviewContextFetchRef.current = true;
+          setReviewContext(ctx);
+          setStage("review");
+        }
+      } catch {
+        /* no active review session */
+      } finally {
+        if (!cancelled) setBootstrapping(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   useEffect(() => {
     if (stage !== "review" || !token) return;
+    if (skipNextReviewContextFetchRef.current) {
+      skipNextReviewContextFetchRef.current = false;
+      setContextLoading(false);
+      return;
+    }
     let cancelled = false;
     setError("");
     setContextLoading(true);
@@ -65,11 +123,12 @@ export default function ClientArtReviewPage() {
     setError("");
     setBusy(true);
     try {
-      await requestArtApprovalOtp(token, email);
+      const delivery = await requestArtApprovalOtp(token, email);
+      setLastDelivery(delivery);
       setStage("otp");
       setOtpCode("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not send verification code.");
+      setError(err instanceof Error ? err.message : "Could not send sign-in link.");
     } finally {
       setBusy(false);
     }
@@ -81,6 +140,7 @@ export default function ClientArtReviewPage() {
     setBusy(true);
     try {
       await verifyArtApprovalOtp(token, email, otpCode.trim());
+      setReviewContext(null);
       setStage("review");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed.");
@@ -89,7 +149,10 @@ export default function ClientArtReviewPage() {
     }
   };
 
-  const handleDecisionSuccess = (result: { approval: ArtApproval; decision: ArtApprovalDecision }) => {
+  const handleDecisionSuccess = (result: {
+    approval: ArtApproval;
+    decision: ArtApprovalDecision;
+  }) => {
     setCompleted(result);
   };
 
@@ -103,13 +166,25 @@ export default function ClientArtReviewPage() {
     );
   }
 
+  if (bootstrapping) {
+    return (
+      <main className="mx-auto max-w-lg flex-1 px-4 py-10">
+        <div className="card">
+          <p className="text-body text-text-secondary">Checking your session…</p>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto max-w-lg flex-1 px-4 py-10">
       <div className="card">
         <h1 className="text-section-title font-semibold text-text-primary">Art approval review</h1>
         <p className="mt-2 text-body text-text-secondary">
-          Confirm your allowlisted work email, enter the verification code your project team shares
-          with you (from application logs), then review the materials and record your decision.
+          Use the allowlisted work email your project team added for you. When outbound email is
+          configured, you receive a one-time sign-in link (and a backup code), like internal users do
+          for login—scoped to this art approval only. Otherwise your contact shares the link and code
+          from server logs.
         </p>
 
         {completed ? (
@@ -145,7 +220,7 @@ export default function ClientArtReviewPage() {
               />
             </div>
             <button type="submit" className="btn-primary" disabled={busy}>
-              {busy ? "Sending…" : "Send verification code"}
+              {busy ? "Sending…" : "Email sign-in link"}
             </button>
           </form>
         ) : stage === "otp" ? (
@@ -155,10 +230,18 @@ export default function ClientArtReviewPage() {
                 {error}
               </p>
             ) : null}
-            <p className="text-body text-text-secondary">
-              Enter the 6-digit code for <span className="font-medium">{email}</span> (your project
-              contact retrieves it from application logs).
-            </p>
+            {lastDelivery === "email" ? (
+              <p className="text-body text-text-secondary">
+                Check <span className="font-medium">{email}</span> for a sign-in link (open it on
+                this device). You can also enter the 6-digit code from that message below.
+              </p>
+            ) : (
+              <p className="text-body text-text-secondary">
+                Enter the 6-digit code for <span className="font-medium">{email}</span>. Your
+                project contact can copy the sign-in link and code from the application server logs
+                if email delivery is not enabled.
+              </p>
+            )}
             <div>
               <label className="label" htmlFor="review-otp">
                 Verification code
@@ -187,6 +270,7 @@ export default function ClientArtReviewPage() {
                 onClick={() => {
                   setStage("email");
                   setError("");
+                  setLastDelivery(null);
                 }}
               >
                 Use a different email
@@ -266,5 +350,21 @@ export default function ClientArtReviewPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function ClientArtReviewPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="mx-auto max-w-lg flex-1 px-4 py-10">
+          <div className="card">
+            <p className="text-body text-text-secondary">Loading…</p>
+          </div>
+        </main>
+      }
+    >
+      <ClientArtReviewInner />
+    </Suspense>
   );
 }
