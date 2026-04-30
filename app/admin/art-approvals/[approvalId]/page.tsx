@@ -169,7 +169,7 @@ export default function ArtApprovalDetailPage() {
       setSavedNotice("Allowlist updated");
       window.setTimeout(() => setSavedNotice(""), 2500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save allowlist.");
+      setError(err instanceof Error ? err.message : "Could not save client emails.");
     } finally {
       setAllowlistSaving(false);
     }
@@ -330,7 +330,7 @@ export default function ArtApprovalDetailPage() {
       </section>
 
       <section className="card max-w-2xl">
-        <h2 className="text-subsection-title font-semibold text-text-primary">Client allowlist</h2>
+        <h2 className="text-subsection-title font-semibold text-text-primary">Client access emails</h2>
         <div className="mt-4">
           <AllowlistEditor
             emails={allowlistedEmailStrings}
@@ -340,11 +340,11 @@ export default function ArtApprovalDetailPage() {
           />
         </div>
         <div className="mt-6 border-t border-slate-200 pt-6">
-          <h3 className="text-body font-semibold text-text-primary">Ready for client</h3>
+          <h3 className="text-body font-semibold text-text-primary">Send to client</h3>
           <p className="mt-1 text-body text-text-secondary">
-            Generates a private review link and moves this record to{" "}
+            Creates a private review link and moves this record to{" "}
             <span className="font-medium text-text-primary">Ready for client</span>. At least one
-            allowlisted email is required.
+            client email is required.
           </p>
           <button
             type="button"
@@ -352,11 +352,11 @@ export default function ArtApprovalDetailPage() {
             onClick={() => void handleMarkReady()}
             disabled={!canMarkReady || readOnly || readySaving}
           >
-            {readySaving ? "Working…" : "Mark ready for client"}
+            {readySaving ? "Working…" : "Mark as ready for client"}
           </button>
           {!canMarkReady && !readOnly && approval.status !== "ready_for_client" && (
             <p className="mt-2 text-caption text-text-secondary">
-              Add and save at least one allowlisted email to enable this action.
+              Add and save at least one client email to enable this action.
             </p>
           )}
         </div>
@@ -441,7 +441,7 @@ export default function ArtApprovalDetailPage() {
       <section className="card max-w-2xl border-status-error/30">
         <h2 className="text-subsection-title font-semibold text-text-primary">Danger zone</h2>
         <p className="mt-1 text-body text-text-secondary">
-          Permanently remove this art approval and all related allowlist entries, files, OTP
+          Permanently remove this art approval and all related client email entries, files, OTP
           challenges, and client decisions.
         </p>
         <button

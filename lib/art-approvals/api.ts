@@ -106,8 +106,7 @@ export async function updateArtApprovalAllowlist(
 }
 
 export type RequestArtApprovalOtpResult = {
-  delivery: "email" | "log";
-  notice?: string;
+  nextPath: string;
 };
 
 export async function requestArtApprovalOtp(
@@ -125,12 +124,10 @@ export async function requestArtApprovalOtp(
   );
   const body = await readJson<{
     ok: boolean;
-    delivery?: "email" | "log";
-    notice?: string;
+    nextPath?: string;
   }>(response);
   return {
-    delivery: body.delivery === "email" ? "email" : "log",
-    ...(body.notice ? { notice: body.notice } : {}),
+    nextPath: body.nextPath || `/review/${encodeURIComponent(token)}`,
   };
 }
 
