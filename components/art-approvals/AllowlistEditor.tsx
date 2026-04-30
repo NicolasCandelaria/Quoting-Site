@@ -38,11 +38,11 @@ export function AllowlistEditor({ emails, disabled, saving, onSave }: Props) {
     <div className="space-y-3">
       <div>
         <label className="label" htmlFor="art-approval-allowlist">
-          Client reviewer emails
+          Client emails for this review
         </label>
         <p className="mb-2 text-caption text-text-secondary">
-          One email per line, or separate with commas. These addresses may request an OTP on the
-          client review link.
+          One email per line (or separated by commas). People on this list can open the review link
+          and sign in by email.
         </p>
         <textarea
           id="art-approval-allowlist"
@@ -59,7 +59,7 @@ export function AllowlistEditor({ emails, disabled, saving, onSave }: Props) {
         onClick={() => void handleSave()}
         disabled={disabled || saving}
       >
-        {saving ? "Saving allowlist…" : "Save allowlist"}
+        {saving ? "Saving emails…" : "Save emails"}
       </button>
     </div>
   );

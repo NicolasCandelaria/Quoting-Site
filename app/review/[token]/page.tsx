@@ -5,18 +5,15 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, Suspense, useEffect, useRef, useState } from "react";
 
 import { ReviewDecisionForm } from "@/components/art-approvals/ReviewDecisionForm";
-import {
-  fetchArtApprovalReviewContext,
-  requestArtApprovalOtp,
-  verifyArtApprovalOtp,
-} from "@/lib/art-approvals/api";
+import { fetchArtApprovalReviewContext, requestArtApprovalOtp } from "@/lib/art-approvals/api";
 import type {
   ArtApproval,
   ArtApprovalDecision,
   ArtApprovalReviewContextResponse,
 } from "@/lib/art-approvals/models";
+import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 
-type Stage = "email" | "otp" | "review";
+type Stage = "email" | "sent" | "review";
 
 const MAGIC_LINK_ERROR_MESSAGES: Record<string, string> = {
   magic_invalid:
@@ -37,14 +34,11 @@ function ClientArtReviewInner() {
 
   const [stage, setStage] = useState<Stage>("email");
   const [email, setEmail] = useState("");
-  const [otpCode, setOtpCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [reviewContext, setReviewContext] = useState<ArtApprovalReviewContextResponse | null>(null);
   const [contextLoading, setContextLoading] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(true);
-  const [lastDelivery, setLastDelivery] = useState<"email" | "log" | null>(null);
-  const [otpNotice, setOtpNotice] = useState<string | null>(null);
   const [completed, setCompleted] = useState<{
     approval: ArtApproval;
     decision: ArtApprovalDecision;
@@ -124,28 +118,21 @@ function ClientArtReviewInner() {
     setError("");
     setBusy(true);
     try {
-      const { delivery, notice } = await requestArtApprovalOtp(token, email);
-      setLastDelivery(delivery);
-      setOtpNotice(notice ?? null);
-      setStage("otp");
-      setOtpCode("");
+      const trimmedEmail = email.trim();
+      const precheck = await requestArtApprovalOtp(token, trimmedEmail);
+      const supabase = createSupabaseClient();
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const callbackUrl = `${origin}/auth/callback?next=${encodeURIComponent(precheck.nextPath)}`;
+      const { error: authError } = await supabase.auth.signInWithOtp({
+        email: trimmedEmail,
+        options: { emailRedirectTo: callbackUrl },
+      });
+      if (authError) {
+        throw authError;
+      }
+      setStage("sent");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send sign-in link.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleVerifyOtp = async (e: FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setBusy(true);
-    try {
-      await verifyArtApprovalOtp(token, email, otpCode.trim());
-      setReviewContext(null);
-      setStage("review");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Verification failed.");
     } finally {
       setBusy(false);
     }
@@ -183,10 +170,8 @@ function ClientArtReviewInner() {
       <div className="card">
         <h1 className="text-section-title font-semibold text-text-primary">Art approval review</h1>
         <p className="mt-2 text-body text-text-secondary">
-          Use the allowlisted work email your project team added for you. When outbound email is
-          configured, you receive a one-time sign-in link (and a backup code), like internal users do
-          for login—scoped to this art approval only. Otherwise your contact shares the link and code
-          from server logs.
+          Enter the client email your project team added for this review. We will email you a secure
+          sign-in link to open this artwork review.
         </p>
 
         {completed ? (
@@ -225,51 +210,18 @@ function ClientArtReviewInner() {
               {busy ? "Sending…" : "Email sign-in link"}
             </button>
           </form>
-        ) : stage === "otp" ? (
-          <form onSubmit={(e) => void handleVerifyOtp(e)} className="mt-6 space-y-4">
+        ) : stage === "sent" ? (
+          <div className="mt-6 space-y-4">
             {error ? (
               <p className="text-body text-red-600" role="alert">
                 {error}
               </p>
             ) : null}
-            {otpNotice ? (
-              <p className="text-body text-amber-800 bg-amber-50 border border-amber-200/80 rounded-button px-3 py-2" role="status">
-                {otpNotice}
-              </p>
-            ) : null}
-            {lastDelivery === "email" ? (
-              <p className="text-body text-text-secondary">
-                Check <span className="font-medium">{email}</span> for a sign-in link (open it on
-                this device). You can also enter the 6-digit code from that message below.
-              </p>
-            ) : (
-              <p className="text-body text-text-secondary">
-                Enter the 6-digit code for <span className="font-medium">{email}</span>. Your
-                project contact can copy the sign-in link and code from the application server logs
-                if email delivery is not enabled.
-              </p>
-            )}
-            <div>
-              <label className="label" htmlFor="review-otp">
-                Verification code
-              </label>
-              <input
-                id="review-otp"
-                inputMode="numeric"
-                pattern="\d{6}"
-                maxLength={6}
-                className="input tracking-widest"
-                value={otpCode}
-                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                required
-                disabled={busy}
-                autoComplete="one-time-code"
-              />
-            </div>
+            <p className="text-body text-text-secondary">
+              We sent a sign-in link to <span className="font-medium">{email}</span>. Open that email
+              on this device and click the link to continue.
+            </p>
             <div className="flex flex-wrap gap-2">
-              <button type="submit" className="btn-primary" disabled={busy}>
-                {busy ? "Verifying…" : "Verify and continue"}
-              </button>
               <button
                 type="button"
                 className="btn-secondary"
@@ -277,14 +229,12 @@ function ClientArtReviewInner() {
                 onClick={() => {
                   setStage("email");
                   setError("");
-                  setLastDelivery(null);
-                  setOtpNotice(null);
                 }}
               >
-                Use a different email
+                Send to a different email
               </button>
             </div>
-          </form>
+          </div>
         ) : contextLoading ? (
           <p className="mt-6 text-body text-text-secondary">Loading review…</p>
         ) : error && stage === "review" ? (
@@ -296,11 +246,11 @@ function ClientArtReviewInner() {
               type="button"
               className="btn-secondary"
               onClick={() => {
-                setStage("otp");
+                setStage("email");
                 setError("");
               }}
             >
-              Back to verification
+              Back
             </button>
           </div>
         ) : reviewContext ? (

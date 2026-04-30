@@ -5,9 +5,11 @@ import {
   getArtApprovalFromSupabase,
   getArtApprovalReadyForClientByRawToken,
   getArtApprovalReviewSessionSecret,
+  isEmailAllowlistedForArtApproval,
   verifyArtApprovalReviewSession,
 } from "@/lib/server/art-approvals";
 import { createSignedArtApprovalDownloadUrl } from "@/lib/server/supabase-storage";
+import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/server/supabase";
 
 function readReviewSessionCookie(request: Request): string | undefined {
@@ -44,8 +46,24 @@ export async function GET(
   const approval = await getArtApprovalReadyForClientByRawToken(token);
   const rawCookie = readReviewSessionCookie(request);
   const session = verifyArtApprovalReviewSession(rawCookie);
+  let signedInEmail: string | undefined;
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    signedInEmail = user?.email?.toLowerCase();
+  } catch {
+    signedInEmail = undefined;
+  }
+  const cookieAuthorized =
+    !!approval && !!session && session.approvalId === approval.id && session.round === approval.round;
+  const supabaseAuthorized =
+    !!approval &&
+    !!signedInEmail &&
+    (await isEmailAllowlistedForArtApproval(approval.id, signedInEmail));
 
-  if (!approval || !session || session.approvalId !== approval.id || session.round !== approval.round) {
+  if (!approval || (!cookieAuthorized && !supabaseAuthorized)) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
