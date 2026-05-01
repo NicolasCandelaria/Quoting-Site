@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ConditionalNav } from "@/components/ConditionalNav";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="page-shell font-sans">
         <ConditionalNav />
         {children}
+        <SpeedInsights />
       </body>
     </html>
   );
