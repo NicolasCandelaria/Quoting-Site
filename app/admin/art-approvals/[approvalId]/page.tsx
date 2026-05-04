@@ -8,6 +8,7 @@ import { ArtApprovalForm, type ArtApprovalFormValues } from "@/components/art-ap
 import { ArtApprovalStatusBadge } from "@/components/art-approvals/ArtApprovalStatusBadge";
 import {
   deleteArtApproval,
+  deleteArtApprovalUploadedFile,
   fetchArtApproval,
   markArtApprovalReadyForClient,
   updateArtApproval,
@@ -17,6 +18,7 @@ import {
 import type { ArtApprovalDetail, ArtApprovalDecisionType } from "@/lib/art-approvals/models";
 import { fetchProjects } from "@/lib/api";
 import type { Project } from "@/lib/models";
+import { Trash2 } from "lucide-react";
 
 function decisionLabel(type: ArtApprovalDecisionType): string {
   return type === "approved" ? "Approved" : "Changes requested";
@@ -62,6 +64,7 @@ export default function ArtApprovalDetailPage() {
   const [allowlistSaving, setAllowlistSaving] = useState(false);
   const [readySaving, setReadySaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [deletingFileId, setDeletingFileId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [lastReviewToken, setLastReviewToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -248,6 +251,26 @@ export default function ArtApprovalDetailPage() {
     }
   };
 
+  const handleDeleteFile = async (fileId: string, originalName: string) => {
+    if (readOnly) return;
+    const confirmed = window.confirm(
+      `Remove “${originalName}” from this approval? This cannot be undone.`,
+    );
+    if (!confirmed) return;
+    setDeletingFileId(fileId);
+    setError("");
+    try {
+      await deleteArtApprovalUploadedFile(approvalId, fileId);
+      await reload();
+      setSavedNotice("File removed");
+      window.setTimeout(() => setSavedNotice(""), 2500);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not delete file.");
+    } finally {
+      setDeletingFileId(null);
+    }
+  };
+
   const canMarkReady =
     approval &&
     (approval.status === "draft" || approval.status === "with_designer") &&
@@ -351,6 +374,59 @@ export default function ArtApprovalDetailPage() {
       </section>
 
       <section className="card max-w-2xl">
+        <h2 className="text-subsection-title font-semibold text-text-primary">Artwork files</h2>
+        <p className="mt-1 text-body text-text-secondary">
+          Upload files for reviewers (max 25MB per file).
+          {!readOnly && approval.files.length > 0
+            ? " Use Remove file to delete an attachment from storage."
+            : null}{" "}
+          {readOnly ? "This approval is read-only." : ""}
+        </p>
+        {!readOnly && (
+          <div className="mt-3">
+            <input
+              type="file"
+              multiple
+              className="text-caption file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:font-medium file:text-text-primary hover:file:bg-slate-200"
+              disabled={uploading}
+              onChange={(e) => void handleUploadFiles(e.target.files)}
+            />
+            {uploading && <p className="mt-2 text-caption text-text-secondary">Uploading…</p>}
+          </div>
+        )}
+        {approval.files.length === 0 ? (
+          <p className="mt-4 text-body text-text-secondary">No files uploaded yet.</p>
+        ) : (
+          <ul className="mt-4 space-y-2">
+            {approval.files.map((f) => (
+              <li
+                key={f.id}
+                className="flex flex-col gap-3 rounded-panel border border-slate-200 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+              >
+                <div className="min-w-0 flex-1">
+                  <span className="block font-medium text-text-primary">{f.originalName}</span>
+                  <span className="text-caption text-text-secondary">
+                    {(f.sizeBytes / 1024).toFixed(1)} KB · {new Date(f.createdAt).toLocaleString()}
+                  </span>
+                </div>
+                {!readOnly ? (
+                  <button
+                    type="button"
+                    className="btn-danger inline-flex shrink-0 items-center gap-2 self-start sm:self-center"
+                    disabled={deletingFileId === f.id}
+                    onClick={() => void handleDeleteFile(f.id, f.originalName)}
+                  >
+                    <Trash2 className="h-4 w-4 shrink-0" aria-hidden />
+                    {deletingFileId === f.id ? "Removing…" : "Remove file"}
+                  </button>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="card max-w-2xl">
         <h2 className="text-subsection-title font-semibold text-text-primary">Client access emails</h2>
         <div className="mt-4">
           <AllowlistEditor
@@ -394,42 +470,6 @@ export default function ArtApprovalDetailPage() {
           </button>
         </section>
       )}
-
-      <section className="card max-w-2xl">
-        <h2 className="text-subsection-title font-semibold text-text-primary">Artwork files</h2>
-        <p className="mt-1 text-body text-text-secondary">
-          Upload files for reviewers (max 25MB per file). {readOnly ? "This approval is read-only." : ""}
-        </p>
-        {!readOnly && (
-          <div className="mt-3">
-            <input
-              type="file"
-              multiple
-              className="text-caption file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:font-medium file:text-text-primary hover:file:bg-slate-200"
-              disabled={uploading}
-              onChange={(e) => void handleUploadFiles(e.target.files)}
-            />
-            {uploading && <p className="mt-2 text-caption text-text-secondary">Uploading…</p>}
-          </div>
-        )}
-        {approval.files.length === 0 ? (
-          <p className="mt-4 text-body text-text-secondary">No files uploaded yet.</p>
-        ) : (
-          <ul className="mt-4 space-y-2">
-            {approval.files.map((f) => (
-              <li
-                key={f.id}
-                className="flex flex-wrap items-baseline justify-between gap-2 rounded-panel border border-slate-200 px-3 py-2"
-              >
-                <span className="font-medium text-text-primary">{f.originalName}</span>
-                <span className="text-caption text-text-secondary">
-                  {(f.sizeBytes / 1024).toFixed(1)} KB · {new Date(f.createdAt).toLocaleString()}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
 
       <section className="card max-w-2xl">
         <h2 className="text-subsection-title font-semibold text-text-primary">Client decisions</h2>

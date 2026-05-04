@@ -20,7 +20,10 @@ import {
   normalizeAllowlistEmails,
   normalizeEmail,
 } from "../art-approvals/validation";
-import { uploadArtApprovalFileToStorage } from "./supabase-storage";
+import {
+  deleteArtApprovalFileFromStorage,
+  uploadArtApprovalFileToStorage,
+} from "./supabase-storage";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -753,6 +756,36 @@ export async function uploadArtApprovalFile(params: {
     uploadedBy: params.uploadedBy,
   });
   return { storagePath, file };
+}
+
+export async function deleteArtApprovalFileRecordInSupabase(
+  approvalId: string,
+  fileId: string,
+): Promise<void> {
+  await request<void>(
+    `/art_approval_files?id=eq.${fileId}&art_approval_id=eq.${approvalId}`,
+    { method: "DELETE" },
+  );
+}
+
+/** Deletes storage object then DB row. Caller must verify approval is editable. */
+export async function deleteArtApprovalFile(params: {
+  approvalId: string;
+  fileId: string;
+}): Promise<void> {
+  const detail = await getArtApprovalFromSupabase(params.approvalId);
+  if (!detail) {
+    throw new Error("Art approval not found.");
+  }
+  if (detail.status === "approved") {
+    throw new Error("Approved records are read-only.");
+  }
+  const file = detail.files.find((f) => f.id === params.fileId);
+  if (!file) {
+    throw new Error("File not found.");
+  }
+  await deleteArtApprovalFileFromStorage(file.storagePath);
+  await deleteArtApprovalFileRecordInSupabase(params.approvalId, params.fileId);
 }
 
 export async function insertArtApprovalOtpChallenge(input: {
