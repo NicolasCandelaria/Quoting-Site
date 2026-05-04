@@ -4,6 +4,7 @@ import type {
   ArtApprovalDecision,
   ArtApprovalDetail,
   ArtApprovalFile,
+  ArtApprovalLogoField,
   ArtApprovalFormFields,
   ArtApprovalStatus,
   ArtApprovalSummary,
@@ -138,38 +139,67 @@ type SupabaseRowArtApprovalFormFields = {
 export const DEFAULT_ART_APPROVAL_FORM_FIELDS: ArtApprovalFormFields = {
   material: "",
   itemSize: "",
-  logo1: "",
-  logo1Color: "",
-  logo1Location: "",
-  logo1Application: "",
+  logos: [{ logo: "", color: "", location: "", application: "" }],
   baseColor: "",
   additionalNotes: "",
-  includeLogo2: false,
-  logo2: "",
-  logo2Color: "",
-  logo2Location: "",
-  logo2Application: "",
 };
 
 function normalizeArtApprovalFormFields(
   raw: Partial<ArtApprovalFormFields> | undefined,
 ): ArtApprovalFormFields {
-  const fields = raw ?? {};
+  const fields = (raw ?? {}) as Partial<ArtApprovalFormFields> & {
+    logo1?: unknown;
+    logo1Color?: unknown;
+    logo1Location?: unknown;
+    logo1Application?: unknown;
+    includeLogo2?: unknown;
+    logo2?: unknown;
+    logo2Color?: unknown;
+    logo2Location?: unknown;
+    logo2Application?: unknown;
+  };
   const clean = (value: unknown): string => (typeof value === "string" ? value.trim() : "");
+  const rawLogos = Array.isArray(fields.logos) ? fields.logos : [];
+  const normalizedFromArray: ArtApprovalLogoField[] = rawLogos
+    .map((l) => {
+      const v = typeof l === "object" && l !== null ? (l as Record<string, unknown>) : {};
+      return {
+        logo: clean(v.logo),
+        color: clean(v.color),
+        location: clean(v.location),
+        application: clean(v.application),
+      };
+    })
+    .slice(0, 6);
+  const normalizedLegacy: ArtApprovalLogoField[] = [
+    {
+      logo: clean(fields.logo1),
+      color: clean(fields.logo1Color),
+      location: clean(fields.logo1Location),
+      application: clean(fields.logo1Application),
+    },
+  ];
+  const hasLegacyLogo2 =
+    fields.includeLogo2 === true ||
+    Boolean(clean(fields.logo2) || clean(fields.logo2Color) || clean(fields.logo2Location) || clean(fields.logo2Application));
+  if (hasLegacyLogo2) {
+    normalizedLegacy.push({
+      logo: clean(fields.logo2),
+      color: clean(fields.logo2Color),
+      location: clean(fields.logo2Location),
+      application: clean(fields.logo2Application),
+    });
+  }
+  const logos =
+    normalizedFromArray.length > 0
+      ? normalizedFromArray
+      : normalizedLegacy;
   return {
     material: clean(fields.material),
     itemSize: clean(fields.itemSize),
-    logo1: clean(fields.logo1),
-    logo1Color: clean(fields.logo1Color),
-    logo1Location: clean(fields.logo1Location),
-    logo1Application: clean(fields.logo1Application),
+    logos: logos.length > 0 ? logos : [{ logo: "", color: "", location: "", application: "" }],
     baseColor: clean(fields.baseColor),
     additionalNotes: clean(fields.additionalNotes),
-    includeLogo2: fields.includeLogo2 === true,
-    logo2: clean(fields.logo2),
-    logo2Color: clean(fields.logo2Color),
-    logo2Location: clean(fields.logo2Location),
-    logo2Application: clean(fields.logo2Application),
   };
 }
 

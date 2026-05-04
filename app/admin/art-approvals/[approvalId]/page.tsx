@@ -32,17 +32,17 @@ function emptyForm(approval: ArtApprovalDetail): ArtApprovalFormValues {
     optionalItemId: approval.optionalItemId ?? "",
     material: fields?.material ?? "",
     itemSize: fields?.itemSize ?? "",
-    logo1: fields?.logo1 ?? "",
-    logo1Color: fields?.logo1Color ?? "",
-    logo1Location: fields?.logo1Location ?? "",
-    logo1Application: fields?.logo1Application ?? "",
+    logos:
+      fields?.logos && fields.logos.length > 0
+        ? fields.logos.map((logo) => ({
+            logo: logo.logo ?? "",
+            color: logo.color ?? "",
+            location: logo.location ?? "",
+            application: logo.application ?? "",
+          }))
+        : [{ logo: "", color: "", location: "", application: "" }],
     baseColor: fields?.baseColor ?? "",
     additionalNotes: fields?.additionalNotes ?? "",
-    includeLogo2: fields?.includeLogo2 ?? false,
-    logo2: fields?.logo2 ?? "",
-    logo2Color: fields?.logo2Color ?? "",
-    logo2Location: fields?.logo2Location ?? "",
-    logo2Application: fields?.logo2Application ?? "",
   };
 }
 
@@ -159,17 +159,9 @@ export default function ArtApprovalDetailPage() {
         formFields: {
           material: formValues.material,
           itemSize: formValues.itemSize,
-          logo1: formValues.logo1,
-          logo1Color: formValues.logo1Color,
-          logo1Location: formValues.logo1Location,
-          logo1Application: formValues.logo1Application,
+          logos: formValues.logos,
           baseColor: formValues.baseColor,
           additionalNotes: formValues.additionalNotes,
-          includeLogo2: formValues.includeLogo2,
-          logo2: formValues.logo2,
-          logo2Color: formValues.logo2Color,
-          logo2Location: formValues.logo2Location,
-          logo2Application: formValues.logo2Application,
         },
         ...(optionalProjectId
           ? { optionalProjectId }

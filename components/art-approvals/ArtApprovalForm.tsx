@@ -11,17 +11,14 @@ export type ArtApprovalFormValues = {
   optionalItemId: string;
   material: string;
   itemSize: string;
-  logo1: string;
-  logo1Color: string;
-  logo1Location: string;
-  logo1Application: string;
+  logos: Array<{
+    logo: string;
+    color: string;
+    location: string;
+    application: string;
+  }>;
   baseColor: string;
   additionalNotes: string;
-  includeLogo2: boolean;
-  logo2: string;
-  logo2Color: string;
-  logo2Location: string;
-  logo2Application: string;
 };
 
 type Props = {
@@ -41,6 +38,21 @@ export function ArtApprovalForm({
   onValuesChange,
   onSubmit,
 }: Props) {
+  const updateLogo = (
+    index: number,
+    patch: Partial<ArtApprovalFormValues["logos"][number]>,
+  ) => {
+    const next = values.logos.map((logo, i) => (i === index ? { ...logo, ...patch } : logo));
+    onValuesChange({ logos: next });
+  };
+
+  const addLogo = () => {
+    if (values.logos.length >= 6) return;
+    onValuesChange({
+      logos: [...values.logos, { logo: "", color: "", location: "", application: "" }],
+    });
+  };
+
   return (
     <form onSubmit={(e) => void onSubmit(e)} className="mt-4 space-y-4">
       <div>
@@ -108,57 +120,76 @@ export function ArtApprovalForm({
         </div>
       </div>
       <div className="rounded-panel border border-slate-200 p-4 space-y-4">
-        <h3 className="text-body font-semibold text-text-primary">Logo 1</h3>
-        <div>
-          <label className="label" htmlFor="art-approval-logo1">
-            Logo 1
-          </label>
-          <input
-            id="art-approval-logo1"
-            className="input"
-            value={values.logo1}
-            onChange={(e) => onValuesChange({ logo1: e.target.value })}
+        {values.logos.map((logo, index) => {
+          const num = index + 1;
+          return (
+            <div key={index} className="space-y-4">
+              <h3 className="text-body font-semibold text-text-primary">Logo {num}</h3>
+              <div>
+                <label className="label" htmlFor={`art-approval-logo-${num}`}>
+                  Logo {num}
+                </label>
+                <input
+                  id={`art-approval-logo-${num}`}
+                  className="input"
+                  value={logo.logo}
+                  onChange={(e) => updateLogo(index, { logo: e.target.value })}
+                  disabled={disabled}
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div>
+                  <label className="label" htmlFor={`art-approval-logo-${num}-color`}>
+                    Color
+                  </label>
+                  <input
+                    id={`art-approval-logo-${num}-color`}
+                    className="input"
+                    value={logo.color}
+                    onChange={(e) => updateLogo(index, { color: e.target.value })}
+                    disabled={disabled}
+                  />
+                </div>
+                <div>
+                  <label className="label" htmlFor={`art-approval-logo-${num}-location`}>
+                    Location
+                  </label>
+                  <input
+                    id={`art-approval-logo-${num}-location`}
+                    className="input"
+                    value={logo.location}
+                    onChange={(e) => updateLogo(index, { location: e.target.value })}
+                    disabled={disabled}
+                  />
+                </div>
+                <div>
+                  <label className="label" htmlFor={`art-approval-logo-${num}-application`}>
+                    Application
+                  </label>
+                  <input
+                    id={`art-approval-logo-${num}-application`}
+                    className="input"
+                    value={logo.application}
+                    onChange={(e) => updateLogo(index, { application: e.target.value })}
+                    disabled={disabled}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        {values.logos.length < 6 ? (
+          <button
+            type="button"
+            onClick={addLogo}
+            className="text-caption font-medium text-accent hover:text-accent-hover underline decoration-from-font"
             disabled={disabled}
-          />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div>
-            <label className="label" htmlFor="art-approval-logo1-color">
-              Color
-            </label>
-            <input
-              id="art-approval-logo1-color"
-              className="input"
-              value={values.logo1Color}
-              onChange={(e) => onValuesChange({ logo1Color: e.target.value })}
-              disabled={disabled}
-            />
-          </div>
-          <div>
-            <label className="label" htmlFor="art-approval-logo1-location">
-              Location
-            </label>
-            <input
-              id="art-approval-logo1-location"
-              className="input"
-              value={values.logo1Location}
-              onChange={(e) => onValuesChange({ logo1Location: e.target.value })}
-              disabled={disabled}
-            />
-          </div>
-          <div>
-            <label className="label" htmlFor="art-approval-logo1-application">
-              Application
-            </label>
-            <input
-              id="art-approval-logo1-application"
-              className="input"
-              value={values.logo1Application}
-              onChange={(e) => onValuesChange({ logo1Application: e.target.value })}
-              disabled={disabled}
-            />
-          </div>
-        </div>
+          >
+            Add Logo
+          </button>
+        ) : (
+          <p className="text-caption text-text-secondary">Maximum of 6 logos reached.</p>
+        )}
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
@@ -185,71 +216,6 @@ export function ArtApprovalForm({
           onChange={(e) => onValuesChange({ additionalNotes: e.target.value })}
           disabled={disabled}
         />
-      </div>
-      <div className="rounded-panel border border-slate-200 p-4 space-y-4">
-        <label className="inline-flex items-center gap-2 text-body text-text-primary">
-          <input
-            type="checkbox"
-            checked={values.includeLogo2}
-            onChange={(e) => onValuesChange({ includeLogo2: e.target.checked })}
-            disabled={disabled}
-          />
-          Add Logo 2
-        </label>
-        {values.includeLogo2 ? (
-          <>
-            <div>
-              <label className="label" htmlFor="art-approval-logo2">
-                Logo 2
-              </label>
-              <input
-                id="art-approval-logo2"
-                className="input"
-                value={values.logo2}
-                onChange={(e) => onValuesChange({ logo2: e.target.value })}
-                disabled={disabled}
-              />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div>
-                <label className="label" htmlFor="art-approval-logo2-color">
-                  Color
-                </label>
-                <input
-                  id="art-approval-logo2-color"
-                  className="input"
-                  value={values.logo2Color}
-                  onChange={(e) => onValuesChange({ logo2Color: e.target.value })}
-                  disabled={disabled}
-                />
-              </div>
-              <div>
-                <label className="label" htmlFor="art-approval-logo2-location">
-                  Location
-                </label>
-                <input
-                  id="art-approval-logo2-location"
-                  className="input"
-                  value={values.logo2Location}
-                  onChange={(e) => onValuesChange({ logo2Location: e.target.value })}
-                  disabled={disabled}
-                />
-              </div>
-              <div>
-                <label className="label" htmlFor="art-approval-logo2-application">
-                  Application
-                </label>
-                <input
-                  id="art-approval-logo2-application"
-                  className="input"
-                  value={values.logo2Application}
-                  onChange={(e) => onValuesChange({ logo2Application: e.target.value })}
-                  disabled={disabled}
-                />
-              </div>
-            </div>
-          </>
-        ) : null}
       </div>
       <div>
         <label className="label" htmlFor="art-approval-project">

@@ -57,17 +57,14 @@ export async function POST(request: Request) {
     formFields?: {
       material?: string;
       itemSize?: string;
-      logo1?: string;
-      logo1Color?: string;
-      logo1Location?: string;
-      logo1Application?: string;
+      logos?: Array<{
+        logo?: string;
+        color?: string;
+        location?: string;
+        application?: string;
+      }>;
       baseColor?: string;
       additionalNotes?: string;
-      includeLogo2?: boolean;
-      logo2?: string;
-      logo2Color?: string;
-      logo2Location?: string;
-      logo2Application?: string;
     };
   };
   try {
