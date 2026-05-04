@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, Suspense, useEffect, useRef, useState } from "react";
 
+import { ArtApprovalReviewDetails } from "@/components/art-approvals/ArtApprovalReviewDetails";
 import { ReviewDecisionForm } from "@/components/art-approvals/ReviewDecisionForm";
 import { fetchArtApprovalReviewContext, requestArtApprovalOtp } from "@/lib/art-approvals/api";
 import type {
@@ -264,6 +265,8 @@ function ClientArtReviewInner() {
                 Round <span className="font-medium text-text-primary">{reviewContext.approval.round}</span>
               </p>
             </div>
+
+            <ArtApprovalReviewDetails formFields={reviewContext.approval.formFields} />
 
             {reviewContext.approval.files.length > 0 ? (
               <div className="mt-6">
