@@ -53,6 +53,13 @@ export function ArtApprovalForm({
     });
   };
 
+  const removeLogo = (index: number) => {
+    if (values.logos.length <= 1) return;
+    onValuesChange({
+      logos: values.logos.filter((_, i) => i !== index),
+    });
+  };
+
   return (
     <form onSubmit={(e) => void onSubmit(e)} className="mt-4 space-y-4">
       <div>
@@ -124,7 +131,19 @@ export function ArtApprovalForm({
           const num = index + 1;
           return (
             <div key={index} className="space-y-4">
-              <h3 className="text-body font-semibold text-text-primary">Logo {num}</h3>
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-body font-semibold text-text-primary">Logo {num}</h3>
+                {values.logos.length > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => removeLogo(index)}
+                    className="text-caption font-medium text-status-error hover:opacity-80 underline decoration-from-font"
+                    disabled={disabled}
+                  >
+                    Remove Logo
+                  </button>
+                ) : null}
+              </div>
               <div>
                 <label className="label" htmlFor={`art-approval-logo-${num}`}>
                   Logo {num}
@@ -185,7 +204,7 @@ export function ArtApprovalForm({
             className="text-caption font-medium text-accent hover:text-accent-hover underline decoration-from-font"
             disabled={disabled}
           >
-            Add Logo
+            Add New Logo
           </button>
         ) : (
           <p className="text-caption text-text-secondary">Maximum of 6 logos reached.</p>
