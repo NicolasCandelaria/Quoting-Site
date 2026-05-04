@@ -44,20 +44,29 @@ function parseUpdateBody(body: unknown): UpdateArtApprovalInput | null {
   }
   if ("formFields" in body && isPlainObject(body.formFields)) {
     const ff = body.formFields;
+    const pickString = (source: Record<string, unknown>, key: string): string => {
+      const value = assignString(source, key);
+      return value ?? "";
+    };
+    const logos = Array.isArray(ff.logos)
+      ? ff.logos
+          .slice(0, 6)
+          .map((logo) => {
+            const l = isPlainObject(logo) ? logo : {};
+            return {
+              logo: pickString(l, "logo"),
+              color: pickString(l, "color"),
+              location: pickString(l, "location"),
+              application: pickString(l, "application"),
+            };
+          })
+      : undefined;
     patch.formFields = {
       material: assignString(ff, "material"),
       itemSize: assignString(ff, "itemSize"),
-      logo1: assignString(ff, "logo1"),
-      logo1Color: assignString(ff, "logo1Color"),
-      logo1Location: assignString(ff, "logo1Location"),
-      logo1Application: assignString(ff, "logo1Application"),
+      ...(logos ? { logos } : {}),
       baseColor: assignString(ff, "baseColor"),
       additionalNotes: assignString(ff, "additionalNotes"),
-      includeLogo2: typeof ff.includeLogo2 === "boolean" ? ff.includeLogo2 : undefined,
-      logo2: assignString(ff, "logo2"),
-      logo2Color: assignString(ff, "logo2Color"),
-      logo2Location: assignString(ff, "logo2Location"),
-      logo2Application: assignString(ff, "logo2Application"),
     };
   }
   return patch;

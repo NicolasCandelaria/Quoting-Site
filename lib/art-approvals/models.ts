@@ -7,20 +7,19 @@ export type ArtApprovalStatus =
 
 export type ArtApprovalDecisionType = "approved" | "changes_requested";
 
+export type ArtApprovalLogoField = {
+  logo: string;
+  color: string;
+  location: string;
+  application: string;
+};
+
 export type ArtApprovalFormFields = {
   material: string;
   itemSize: string;
-  logo1: string;
-  logo1Color: string;
-  logo1Location: string;
-  logo1Application: string;
+  logos: ArtApprovalLogoField[];
   baseColor: string;
   additionalNotes: string;
-  includeLogo2: boolean;
-  logo2: string;
-  logo2Color: string;
-  logo2Location: string;
-  logo2Application: string;
 };
 
 export type ArtApprovalSummary = {

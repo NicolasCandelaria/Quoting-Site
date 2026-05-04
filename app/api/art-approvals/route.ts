@@ -57,17 +57,14 @@ export async function POST(request: Request) {
     formFields?: {
       material?: string;
       itemSize?: string;
-      logo1?: string;
-      logo1Color?: string;
-      logo1Location?: string;
-      logo1Application?: string;
+      logos?: Array<{
+        logo?: string;
+        color?: string;
+        location?: string;
+        application?: string;
+      }>;
       baseColor?: string;
       additionalNotes?: string;
-      includeLogo2?: boolean;
-      logo2?: string;
-      logo2Color?: string;
-      logo2Location?: string;
-      logo2Application?: string;
     };
   };
   try {
@@ -84,13 +81,30 @@ export async function POST(request: Request) {
   }
 
   try {
+    const normalizedFormFields = payload.formFields
+      ? {
+          material: payload.formFields.material,
+          itemSize: payload.formFields.itemSize,
+          logos: Array.isArray(payload.formFields.logos)
+            ? payload.formFields.logos.slice(0, 6).map((logo) => ({
+                logo: typeof logo.logo === "string" ? logo.logo : "",
+                color: typeof logo.color === "string" ? logo.color : "",
+                location: typeof logo.location === "string" ? logo.location : "",
+                application: typeof logo.application === "string" ? logo.application : "",
+              }))
+            : undefined,
+          baseColor: payload.formFields.baseColor,
+          additionalNotes: payload.formFields.additionalNotes,
+        }
+      : undefined;
+
     const summary = await createArtApprovalInSupabase({
       title: payload.title.trim(),
       clientName: payload.clientName.trim(),
       notes: payload.notes?.trim() || undefined,
       optionalProjectId: payload.optionalProjectId?.trim() || undefined,
       optionalItemId: payload.optionalItemId?.trim() || undefined,
-      formFields: payload.formFields,
+      formFields: normalizedFormFields,
       createdBy: user.email,
     });
     const approval = await getArtApprovalFromSupabase(summary.id);
