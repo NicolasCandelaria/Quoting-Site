@@ -92,6 +92,19 @@ export async function uploadArtApprovalFile(
   return body.file;
 }
 
+export async function deleteArtApprovalUploadedFile(
+  approvalId: string,
+  fileId: string,
+): Promise<void> {
+  const response = await fetch(
+    `/api/art-approvals/${encodeURIComponent(approvalId)}/files/${encodeURIComponent(fileId)}`,
+    { method: "DELETE" },
+  );
+  if (response.status === 204) return;
+  const body = (await response.json()) as { error?: string };
+  throw new Error(body.error ?? `Request failed (${response.status})`);
+}
+
 export async function updateArtApprovalAllowlist(
   approvalId: string,
   emails: string[],

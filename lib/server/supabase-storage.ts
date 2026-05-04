@@ -184,6 +184,15 @@ export async function uploadArtApprovalFileToStorage(params: {
   return { storagePath };
 }
 
+/** Remove one object from the private `art-approvals` bucket (no-op if missing). */
+export async function deleteArtApprovalFileFromStorage(storagePath: string): Promise<void> {
+  const supabase = getClient();
+  const { error } = await supabase.storage.from(ART_APPROVAL_BUCKET).remove([storagePath]);
+  if (error) {
+    throw new Error(`Art approval file delete failed: ${error.message}`);
+  }
+}
+
 /** Short-lived signed URL for a private object in the `art-approvals` bucket. */
 export async function createSignedArtApprovalDownloadUrl(
   storagePath: string,
