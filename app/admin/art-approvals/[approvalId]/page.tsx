@@ -23,12 +23,26 @@ function decisionLabel(type: ArtApprovalDecisionType): string {
 }
 
 function emptyForm(approval: ArtApprovalDetail): ArtApprovalFormValues {
+  const fields = approval.formFields;
   return {
     title: approval.title,
     clientName: approval.clientName,
     notes: approval.notes ?? "",
     optionalProjectId: approval.optionalProjectId ?? "",
     optionalItemId: approval.optionalItemId ?? "",
+    material: fields?.material ?? "",
+    itemSize: fields?.itemSize ?? "",
+    logo1: fields?.logo1 ?? "",
+    logo1Color: fields?.logo1Color ?? "",
+    logo1Location: fields?.logo1Location ?? "",
+    logo1Application: fields?.logo1Application ?? "",
+    baseColor: fields?.baseColor ?? "",
+    additionalNotes: fields?.additionalNotes ?? "",
+    includeLogo2: fields?.includeLogo2 ?? false,
+    logo2: fields?.logo2 ?? "",
+    logo2Color: fields?.logo2Color ?? "",
+    logo2Location: fields?.logo2Location ?? "",
+    logo2Application: fields?.logo2Application ?? "",
   };
 }
 
@@ -142,6 +156,21 @@ export default function ArtApprovalDetailPage() {
         title: formValues.title.trim(),
         clientName: formValues.clientName.trim(),
         notes: formValues.notes.trim() || undefined,
+        formFields: {
+          material: formValues.material,
+          itemSize: formValues.itemSize,
+          logo1: formValues.logo1,
+          logo1Color: formValues.logo1Color,
+          logo1Location: formValues.logo1Location,
+          logo1Application: formValues.logo1Application,
+          baseColor: formValues.baseColor,
+          additionalNotes: formValues.additionalNotes,
+          includeLogo2: formValues.includeLogo2,
+          logo2: formValues.logo2,
+          logo2Color: formValues.logo2Color,
+          logo2Location: formValues.logo2Location,
+          logo2Application: formValues.logo2Application,
+        },
         ...(optionalProjectId
           ? { optionalProjectId }
           : { optionalProjectId: null as unknown as string }),
