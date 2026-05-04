@@ -54,6 +54,21 @@ export async function POST(request: Request) {
     notes?: string;
     optionalProjectId?: string;
     optionalItemId?: string;
+    formFields?: {
+      material?: string;
+      itemSize?: string;
+      logo1?: string;
+      logo1Color?: string;
+      logo1Location?: string;
+      logo1Application?: string;
+      baseColor?: string;
+      additionalNotes?: string;
+      includeLogo2?: boolean;
+      logo2?: string;
+      logo2Color?: string;
+      logo2Location?: string;
+      logo2Application?: string;
+    };
   };
   try {
     payload = (await request.json()) as typeof payload;
@@ -75,6 +90,7 @@ export async function POST(request: Request) {
       notes: payload.notes?.trim() || undefined,
       optionalProjectId: payload.optionalProjectId?.trim() || undefined,
       optionalItemId: payload.optionalItemId?.trim() || undefined,
+      formFields: payload.formFields,
       createdBy: user.email,
     });
     const approval = await getArtApprovalFromSupabase(summary.id);

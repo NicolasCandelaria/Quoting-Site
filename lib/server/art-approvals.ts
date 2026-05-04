@@ -4,6 +4,7 @@ import type {
   ArtApprovalDecision,
   ArtApprovalDetail,
   ArtApprovalFile,
+  ArtApprovalFormFields,
   ArtApprovalStatus,
   ArtApprovalSummary,
   ClientDecisionPayload,
@@ -126,6 +127,51 @@ type SupabaseRowDecision = {
   comment: string | null;
   decided_at: string;
 };
+
+type SupabaseRowArtApprovalFormFields = {
+  art_approval_id: string;
+  schema_version: number;
+  fields: unknown;
+  updated_at: string;
+};
+
+export const DEFAULT_ART_APPROVAL_FORM_FIELDS: ArtApprovalFormFields = {
+  material: "",
+  itemSize: "",
+  logo1: "",
+  logo1Color: "",
+  logo1Location: "",
+  logo1Application: "",
+  baseColor: "",
+  additionalNotes: "",
+  includeLogo2: false,
+  logo2: "",
+  logo2Color: "",
+  logo2Location: "",
+  logo2Application: "",
+};
+
+function normalizeArtApprovalFormFields(
+  raw: Partial<ArtApprovalFormFields> | undefined,
+): ArtApprovalFormFields {
+  const fields = raw ?? {};
+  const clean = (value: unknown): string => (typeof value === "string" ? value.trim() : "");
+  return {
+    material: clean(fields.material),
+    itemSize: clean(fields.itemSize),
+    logo1: clean(fields.logo1),
+    logo1Color: clean(fields.logo1Color),
+    logo1Location: clean(fields.logo1Location),
+    logo1Application: clean(fields.logo1Application),
+    baseColor: clean(fields.baseColor),
+    additionalNotes: clean(fields.additionalNotes),
+    includeLogo2: fields.includeLogo2 === true,
+    logo2: clean(fields.logo2),
+    logo2Color: clean(fields.logo2Color),
+    logo2Location: clean(fields.logo2Location),
+    logo2Application: clean(fields.logo2Application),
+  };
+}
 
 function assertStatus(value: string): ArtApprovalStatus {
   if (
@@ -282,7 +328,7 @@ export async function getArtApprovalFromSupabase(
   const row = approvals[0];
   if (!row) return undefined;
 
-  const [allowlisted, files, decisions] = await Promise.all([
+  const [allowlisted, files, decisions, formFieldRows] = await Promise.all([
     request<SupabaseRowAllowlist[]>(
       `/art_approval_allowlisted_emails?select=id,art_approval_id,email,created_at&art_approval_id=eq.${approvalId}&order=created_at.asc`,
     ),
@@ -292,10 +338,18 @@ export async function getArtApprovalFromSupabase(
     request<SupabaseRowDecision[]>(
       `/art_approval_client_decisions?select=id,art_approval_id,round,decision_type,verified_email,typed_full_name,comment,decided_at&art_approval_id=eq.${approvalId}&order=decided_at.desc`,
     ),
+    request<SupabaseRowArtApprovalFormFields[]>(
+      `/art_approval_form_fields?select=art_approval_id,schema_version,fields,updated_at&art_approval_id=eq.${approvalId}&limit=1`,
+    ),
   ]);
+  const formFields = normalizeArtApprovalFormFields(
+    (formFieldRows[0]?.fields as Partial<ArtApprovalFormFields> | undefined) ??
+      DEFAULT_ART_APPROVAL_FORM_FIELDS,
+  );
 
   return {
     ...toSummary(row),
+    formFields,
     allowlistedEmails: allowlisted.map(toAllowlistRow),
     files: files.map(toFileRow),
     decisions: decisions.map(toDecisionRow),
@@ -325,6 +379,23 @@ export async function createArtApprovalInSupabase(
   );
   const row = rows[0];
   if (!row) throw new Error("Art approval insert returned no row.");
+  if (input.formFields) {
+    await request<SupabaseRowArtApprovalFormFields[]>(
+      `/art_approval_form_fields?on_conflict=art_approval_id&select=art_approval_id,schema_version,fields,updated_at`,
+      {
+        method: "POST",
+        headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+        body: JSON.stringify([
+          {
+            art_approval_id: row.id,
+            schema_version: 1,
+            fields: normalizeArtApprovalFormFields(input.formFields),
+            updated_at: new Date().toISOString(),
+          },
+        ]),
+      },
+    );
+  }
   return toSummary(row);
 }
 
@@ -345,6 +416,23 @@ export async function updateArtApprovalInSupabase(
   }
   if (patch.optionalItemId !== undefined) {
     body.optional_item_id = patch.optionalItemId ?? null;
+  }
+  if (patch.formFields !== undefined) {
+    await request<SupabaseRowArtApprovalFormFields[]>(
+      `/art_approval_form_fields?on_conflict=art_approval_id&select=art_approval_id,schema_version,fields,updated_at`,
+      {
+        method: "POST",
+        headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+        body: JSON.stringify([
+          {
+            art_approval_id: approvalId,
+            schema_version: 1,
+            fields: normalizeArtApprovalFormFields(patch.formFields),
+            updated_at: new Date().toISOString(),
+          },
+        ]),
+      },
+    );
   }
   body.updated_at = new Date().toISOString();
 

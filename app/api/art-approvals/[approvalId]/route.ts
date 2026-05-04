@@ -15,6 +15,10 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 function parseUpdateBody(body: unknown): UpdateArtApprovalInput | null {
   if (!isPlainObject(body)) return null;
   const patch: UpdateArtApprovalInput = {};
+  const assignString = (
+    source: Record<string, unknown>,
+    key: string,
+  ): string | undefined => (typeof source[key] === "string" ? source[key] : undefined);
   if ("title" in body && typeof body.title === "string") patch.title = body.title;
   if ("clientName" in body && typeof body.clientName === "string") {
     patch.clientName = body.clientName;
@@ -37,6 +41,24 @@ function parseUpdateBody(body: unknown): UpdateArtApprovalInput | null {
     else if (typeof body.optionalItemId === "string") {
       patch.optionalItemId = body.optionalItemId;
     }
+  }
+  if ("formFields" in body && isPlainObject(body.formFields)) {
+    const ff = body.formFields;
+    patch.formFields = {
+      material: assignString(ff, "material"),
+      itemSize: assignString(ff, "itemSize"),
+      logo1: assignString(ff, "logo1"),
+      logo1Color: assignString(ff, "logo1Color"),
+      logo1Location: assignString(ff, "logo1Location"),
+      logo1Application: assignString(ff, "logo1Application"),
+      baseColor: assignString(ff, "baseColor"),
+      additionalNotes: assignString(ff, "additionalNotes"),
+      includeLogo2: typeof ff.includeLogo2 === "boolean" ? ff.includeLogo2 : undefined,
+      logo2: assignString(ff, "logo2"),
+      logo2Color: assignString(ff, "logo2Color"),
+      logo2Location: assignString(ff, "logo2Location"),
+      logo2Application: assignString(ff, "logo2Application"),
+    };
   }
   return patch;
 }

@@ -7,6 +7,22 @@ export type ArtApprovalStatus =
 
 export type ArtApprovalDecisionType = "approved" | "changes_requested";
 
+export type ArtApprovalFormFields = {
+  material: string;
+  itemSize: string;
+  logo1: string;
+  logo1Color: string;
+  logo1Location: string;
+  logo1Application: string;
+  baseColor: string;
+  additionalNotes: string;
+  includeLogo2: boolean;
+  logo2: string;
+  logo2Color: string;
+  logo2Location: string;
+  logo2Application: string;
+};
+
 export type ArtApprovalSummary = {
   id: string;
   title: string;
@@ -16,6 +32,7 @@ export type ArtApprovalSummary = {
   optionalProjectId?: string;
   optionalItemId?: string;
   notes?: string;
+  formFields?: ArtApprovalFormFields;
   reviewTokenHash?: string;
   readyForClientAt?: string;
   createdBy: string;
@@ -66,6 +83,7 @@ export type CreateArtApprovalInput = {
   notes?: string;
   optionalProjectId?: string;
   optionalItemId?: string;
+  formFields?: Partial<ArtApprovalFormFields>;
 };
 
 export type UpdateArtApprovalInput = {
@@ -75,6 +93,7 @@ export type UpdateArtApprovalInput = {
   notes?: string;
   optionalProjectId?: string;
   optionalItemId?: string;
+  formFields?: Partial<ArtApprovalFormFields>;
 };
 
 export type UpdateArtApprovalAllowlistInput = {
@@ -111,7 +130,7 @@ export type ArtApprovalReviewContextApproval = {
   status: ArtApprovalStatus;
   files: ArtApprovalReviewContextFile[];
   /** Non-sensitive linkage fields for the client-facing view (no internal notes). */
-  formFields: {
+  formFields: ArtApprovalFormFields & {
     optionalProjectId?: string | null;
     optionalItemId?: string | null;
   };

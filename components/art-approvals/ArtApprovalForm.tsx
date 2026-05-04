@@ -9,6 +9,19 @@ export type ArtApprovalFormValues = {
   notes: string;
   optionalProjectId: string;
   optionalItemId: string;
+  material: string;
+  itemSize: string;
+  logo1: string;
+  logo1Color: string;
+  logo1Location: string;
+  logo1Application: string;
+  baseColor: string;
+  additionalNotes: string;
+  includeLogo2: boolean;
+  logo2: string;
+  logo2Color: string;
+  logo2Location: string;
+  logo2Application: string;
 };
 
 type Props = {
@@ -67,6 +80,176 @@ export function ArtApprovalForm({
           onChange={(e) => onValuesChange({ notes: e.target.value })}
           disabled={disabled}
         />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className="label" htmlFor="art-approval-material">
+            Material
+          </label>
+          <input
+            id="art-approval-material"
+            className="input"
+            value={values.material}
+            onChange={(e) => onValuesChange({ material: e.target.value })}
+            disabled={disabled}
+          />
+        </div>
+        <div>
+          <label className="label" htmlFor="art-approval-item-size">
+            Item size
+          </label>
+          <input
+            id="art-approval-item-size"
+            className="input"
+            value={values.itemSize}
+            onChange={(e) => onValuesChange({ itemSize: e.target.value })}
+            disabled={disabled}
+          />
+        </div>
+      </div>
+      <div className="rounded-panel border border-slate-200 p-4 space-y-4">
+        <h3 className="text-body font-semibold text-text-primary">Logo 1</h3>
+        <div>
+          <label className="label" htmlFor="art-approval-logo1">
+            Logo 1
+          </label>
+          <input
+            id="art-approval-logo1"
+            className="input"
+            value={values.logo1}
+            onChange={(e) => onValuesChange({ logo1: e.target.value })}
+            disabled={disabled}
+          />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div>
+            <label className="label" htmlFor="art-approval-logo1-color">
+              Color
+            </label>
+            <input
+              id="art-approval-logo1-color"
+              className="input"
+              value={values.logo1Color}
+              onChange={(e) => onValuesChange({ logo1Color: e.target.value })}
+              disabled={disabled}
+            />
+          </div>
+          <div>
+            <label className="label" htmlFor="art-approval-logo1-location">
+              Location
+            </label>
+            <input
+              id="art-approval-logo1-location"
+              className="input"
+              value={values.logo1Location}
+              onChange={(e) => onValuesChange({ logo1Location: e.target.value })}
+              disabled={disabled}
+            />
+          </div>
+          <div>
+            <label className="label" htmlFor="art-approval-logo1-application">
+              Application
+            </label>
+            <input
+              id="art-approval-logo1-application"
+              className="input"
+              value={values.logo1Application}
+              onChange={(e) => onValuesChange({ logo1Application: e.target.value })}
+              disabled={disabled}
+            />
+          </div>
+        </div>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className="label" htmlFor="art-approval-base-color">
+            Base color
+          </label>
+          <input
+            id="art-approval-base-color"
+            className="input"
+            value={values.baseColor}
+            onChange={(e) => onValuesChange({ baseColor: e.target.value })}
+            disabled={disabled}
+          />
+        </div>
+      </div>
+      <div>
+        <label className="label" htmlFor="art-approval-additional-notes">
+          Additional notes
+        </label>
+        <textarea
+          id="art-approval-additional-notes"
+          className="input min-h-[96px]"
+          value={values.additionalNotes}
+          onChange={(e) => onValuesChange({ additionalNotes: e.target.value })}
+          disabled={disabled}
+        />
+      </div>
+      <div className="rounded-panel border border-slate-200 p-4 space-y-4">
+        <label className="inline-flex items-center gap-2 text-body text-text-primary">
+          <input
+            type="checkbox"
+            checked={values.includeLogo2}
+            onChange={(e) => onValuesChange({ includeLogo2: e.target.checked })}
+            disabled={disabled}
+          />
+          Add Logo 2
+        </label>
+        {values.includeLogo2 ? (
+          <>
+            <div>
+              <label className="label" htmlFor="art-approval-logo2">
+                Logo 2
+              </label>
+              <input
+                id="art-approval-logo2"
+                className="input"
+                value={values.logo2}
+                onChange={(e) => onValuesChange({ logo2: e.target.value })}
+                disabled={disabled}
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <label className="label" htmlFor="art-approval-logo2-color">
+                  Color
+                </label>
+                <input
+                  id="art-approval-logo2-color"
+                  className="input"
+                  value={values.logo2Color}
+                  onChange={(e) => onValuesChange({ logo2Color: e.target.value })}
+                  disabled={disabled}
+                />
+              </div>
+              <div>
+                <label className="label" htmlFor="art-approval-logo2-location">
+                  Location
+                </label>
+                <input
+                  id="art-approval-logo2-location"
+                  className="input"
+                  value={values.logo2Location}
+                  onChange={(e) => onValuesChange({ logo2Location: e.target.value })}
+                  disabled={disabled}
+                />
+              </div>
+              <div>
+                <label className="label" htmlFor="art-approval-logo2-application">
+                  Application
+                </label>
+                <input
+                  id="art-approval-logo2-application"
+                  className="input"
+                  value={values.logo2Application}
+                  onChange={(e) => onValuesChange({ logo2Application: e.target.value })}
+                  disabled={disabled}
+                />
+              </div>
+            </div>
+          </>
+        ) : null}
       </div>
       <div>
         <label className="label" htmlFor="art-approval-project">
