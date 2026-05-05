@@ -55,6 +55,10 @@ export function ArtApprovalForm({
 
   const removeLogo = (index: number) => {
     if (values.logos.length <= 1) return;
+    const num = index + 1;
+    if (!window.confirm(`Remove Logo ${num} from this approval?`)) {
+      return;
+    }
     onValuesChange({
       logos: values.logos.filter((_, i) => i !== index),
     });
