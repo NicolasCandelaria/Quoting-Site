@@ -6,6 +6,7 @@ import {
   isEmailAllowlistedForArtApproval,
 } from "@/lib/server/art-approvals";
 import { isSupabaseConfigured } from "@/lib/server/supabase";
+import { parseSanitizedJson, RequestInputError } from "@/lib/server/request-input";
 
 const GENERIC_NOT_FOUND = "Unable to process this request.";
 
@@ -28,9 +29,12 @@ export async function POST(
 
   let body: unknown;
   try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+    body = await parseSanitizedJson(request);
+  } catch (error) {
+    if (error instanceof RequestInputError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
   if (!isPlainObject(body) || typeof body.email !== "string") {

@@ -6,6 +6,7 @@ import {
   listArtApprovalsFromSupabase,
 } from "@/lib/server/art-approvals";
 import { isSupabaseConfigured } from "@/lib/server/supabase";
+import { parseSanitizedJson, RequestInputError } from "@/lib/server/request-input";
 
 export async function GET() {
   if (!isSupabaseConfigured()) {
@@ -68,9 +69,12 @@ export async function POST(request: Request) {
     };
   };
   try {
-    payload = (await request.json()) as typeof payload;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+    payload = await parseSanitizedJson<typeof payload>(request);
+  } catch (error) {
+    if (error instanceof RequestInputError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
   if (!payload.title?.trim() || !payload.clientName?.trim()) {
