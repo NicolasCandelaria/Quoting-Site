@@ -16,6 +16,7 @@ import {
   verifyOtpCode,
 } from "@/lib/server/art-approvals";
 import { isSupabaseConfigured } from "@/lib/server/supabase";
+import { parseSanitizedJson, RequestInputError } from "@/lib/server/request-input";
 
 const GENERIC_VERIFY_FAIL = "Invalid or expired verification code.";
 
@@ -46,9 +47,12 @@ export async function POST(
   const { token } = await context.params;
   let body: unknown;
   try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+    body = await parseSanitizedJson(request);
+  } catch (error) {
+    if (error instanceof RequestInputError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
   if (

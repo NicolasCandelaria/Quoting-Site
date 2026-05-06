@@ -13,6 +13,7 @@ import {
 } from "@/lib/server/art-approvals";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/server/supabase";
+import { parseSanitizedJson, RequestInputError } from "@/lib/server/request-input";
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -52,9 +53,12 @@ export async function POST(
   const { token } = await context.params;
   let body: unknown;
   try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+    body = await parseSanitizedJson(request);
+  } catch (error) {
+    if (error instanceof RequestInputError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
   const payload = parseClientDecisionBody(body);

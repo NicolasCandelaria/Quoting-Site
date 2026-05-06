@@ -5,6 +5,7 @@ import {
   listProjectsFromSupabase,
 } from "@/lib/server/supabase";
 import { getSessionUser } from "@/lib/server/auth";
+import { parseSanitizedJson, RequestInputError } from "@/lib/server/request-input";
 
 export async function GET() {
   if (!isSupabaseConfigured()) {
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const payload = (await request.json()) as {
+  let payload: {
     name?: string;
     client?: string;
     notes?: string;
@@ -49,6 +50,14 @@ export async function POST(request: Request) {
     contactName?: string;
     quoteDate?: string;
   };
+  try {
+    payload = await parseSanitizedJson<typeof payload>(request);
+  } catch (error) {
+    if (error instanceof RequestInputError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+  }
 
   if (!payload.name?.trim() || !payload.client?.trim()) {
     return NextResponse.json(

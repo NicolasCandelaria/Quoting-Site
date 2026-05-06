@@ -7,6 +7,7 @@ import {
 } from "@/lib/server/supabase";
 import { getSessionUser } from "@/lib/server/auth";
 import type { Project } from "@/lib/models";
+import { parseSanitizedJson, RequestInputError } from "@/lib/server/request-input";
 
 export async function GET(
   _request: Request,
@@ -50,7 +51,15 @@ export async function POST(
   }
 
   const { projectId } = await context.params;
-  const payload = (await request.json()) as { project?: Project };
+  let payload: { project?: Project };
+  try {
+    payload = await parseSanitizedJson<typeof payload>(request);
+  } catch (error) {
+    if (error instanceof RequestInputError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+  }
 
   if (!payload.project || payload.project.id !== projectId) {
     return NextResponse.json(

@@ -7,6 +7,7 @@ import {
   SupabaseRequestError,
 } from "@/lib/server/art-approvals";
 import { isSupabaseConfigured } from "@/lib/server/supabase";
+import { parseSanitizedJson, RequestInputError } from "@/lib/server/request-input";
 
 export async function POST(
   request: Request,
@@ -31,9 +32,12 @@ export async function POST(
 
   let payload: { emails?: unknown };
   try {
-    payload = (await request.json()) as { emails?: unknown };
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+    payload = await parseSanitizedJson<{ emails?: unknown }>(request);
+  } catch (error) {
+    if (error instanceof RequestInputError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
   try {
