@@ -7,10 +7,10 @@ export default function HomePage() {
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-3">
         <h1 className="text-page-title font-semibold text-text-primary sm:text-[28px]">
-          Quote Sheet
+          Billboard Studio
         </h1>
         <p className="max-w-xl text-body text-text-secondary">
-          Build and share client-facing quote sheets. Create projects, add items
+          Build and share client-facing quote experiences. Create projects, add items
           with pricing, and export PDFs for procurement.
         </p>
       </header>
@@ -20,8 +20,7 @@ export default function HomePage() {
           Get started as an account manager
         </h2>
         <p className="text-body text-text-secondary">
-          Create and manage projects, add items, and generate client-ready quote
-          sheets.
+          Create and manage projects, add items, and generate client-ready quotes.
         </p>
         <div>
           <Link href="/login" className="btn-primary">Open Admin</Link>

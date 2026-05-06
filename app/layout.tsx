@@ -7,8 +7,8 @@ import { ConditionalNav } from "@/components/ConditionalNav";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "Quote Sheet",
-  description: "Build and share client-facing quote sheets",
+  title: "Billboard Studio",
+  description: "Build and share client-facing quote experiences",
   icons: {
     icon: "/images/favicon.png",
   },

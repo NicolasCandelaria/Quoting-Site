@@ -591,7 +591,7 @@ const blob = new Blob([normalizedPdfBytes.buffer], {
 
   const link = document.createElement("a");
   link.href = url;
-  link.download = `${project.name || "quote-sheet"}.pdf`;
+  link.download = `${project.name || "billboard-studio"}.pdf`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

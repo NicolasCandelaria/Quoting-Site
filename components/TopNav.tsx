@@ -14,13 +14,13 @@ export function TopNav() {
         <Link
           href={isClientView && currentProjectId ? `/q/${currentProjectId}` : "/"}
           className="inline-flex items-center gap-2"
-          aria-label="Quote Sheet"
+          aria-label="Billboard Studio"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/logo.png" alt="Quote Sheet" className="h-7 w-auto" />
+          <img src="/images/logo.png" alt="Billboard Studio" className="h-7 w-auto" />
           {isClientView && (
             <span className="hidden text-section-title font-semibold text-text-primary sm:inline">
-              Quote Sheet
+              Billboard Studio
             </span>
           )}
         </Link>

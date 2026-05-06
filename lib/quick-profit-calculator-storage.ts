@@ -7,8 +7,10 @@ import {
 } from "@/lib/quick-profit-calculator";
 
 export const DEFAULT_USD_CAD_RATE = 1.41;
-export const QUICK_PROFIT_STORAGE_V2 = "quote-sheet:quick-profit-calculator:v2";
-export const QUICK_PROFIT_STORAGE_V1 = "quote-sheet:quick-profit-calculator:v1";
+export const QUICK_PROFIT_STORAGE_V2 = "billboard-studio:quick-profit-calculator:v2";
+export const QUICK_PROFIT_STORAGE_V1 = "billboard-studio:quick-profit-calculator:v1";
+const LEGACY_QUICK_PROFIT_STORAGE_V2 = "quote-sheet:quick-profit-calculator:v2";
+const LEGACY_QUICK_PROFIT_STORAGE_V1 = "quote-sheet:quick-profit-calculator:v1";
 export const TIER_COUNT = 3;
 
 export type TierForm = {
@@ -167,7 +169,10 @@ export function readQuickProfitFromLocalStorage(): PersistedV2 | null {
   try {
     let raw = localStorage.getItem(QUICK_PROFIT_STORAGE_V2);
     if (!raw) raw = localStorage.getItem(QUICK_PROFIT_STORAGE_V1);
+    if (!raw) raw = localStorage.getItem(LEGACY_QUICK_PROFIT_STORAGE_V2);
+    if (!raw) raw = localStorage.getItem(LEGACY_QUICK_PROFIT_STORAGE_V1);
     if (!raw) return null;
+    localStorage.setItem(QUICK_PROFIT_STORAGE_V2, raw);
     return parsePersisted(raw);
   } catch {
     return null;
