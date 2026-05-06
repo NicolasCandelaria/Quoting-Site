@@ -49,7 +49,7 @@ export default function AdminHomePage() {
             Projects
           </h1>
           <p className="mt-1 max-w-xl text-body text-text-secondary">
-            Create quote sheet projects for each client engagement, then add
+            Create project workspaces for each client engagement, then add
             items with pricing tiers.
           </p>
         </div>

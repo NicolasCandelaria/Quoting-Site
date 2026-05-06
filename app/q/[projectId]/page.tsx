@@ -30,7 +30,7 @@ export default function ClientProjectPage() {
   }, [projectId]);
 
   if (loading) {
-    return <p className="text-body text-text-secondary">Loading quote sheet...</p>;
+    return <p className="text-body text-text-secondary">Loading project...</p>;
   }
 
   if (!project) {
@@ -67,7 +67,7 @@ export default function ClientProjectPage() {
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-caption uppercase tracking-[0.2em] text-text-tertiary">Quote Sheet</p>
+          <p className="text-caption uppercase tracking-[0.2em] text-text-tertiary">Billboard Studio</p>
           <div className="flex flex-wrap gap-2">
             <button type="button" className="btn-secondary" onClick={handleCopyLink}>
               {copied ? "Copied" : "Copy Link"}

@@ -79,9 +79,9 @@ export function AdminSidebar({ open = true }: AdminSidebarProps) {
       />
       <div className="relative z-10 flex h-full flex-col gap-4 pt-6">
         <div className="px-3">
-          <Link href="/admin" className="inline-flex items-center gap-2" aria-label="Quote Sheet">
+          <Link href="/admin" className="inline-flex items-center gap-2" aria-label="Billboard Studio">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/logo.png" alt="Quote Sheet" className="h-14 w-auto" />
+            <img src="/images/logo.png" alt="Billboard Studio" className="h-14 w-auto" />
           </Link>
         </div>
 

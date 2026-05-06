@@ -328,7 +328,7 @@ export default function ProjectDetailPage() {
 
         {project.items.length === 0 ? (
           <p className="text-body text-text-secondary">
-            No items yet. Use <span className="font-semibold text-text-primary">Add Item</span> to start building this quote sheet.
+            No items yet. Use <span className="font-semibold text-text-primary">Add Item</span> to start building this project.
           </p>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">

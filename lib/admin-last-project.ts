@@ -1,4 +1,5 @@
-const LAST_ADMIN_PROJECT_KEY = "quote-sheet:last-admin-project-id";
+const LAST_ADMIN_PROJECT_KEY = "billboard-studio:last-admin-project-id";
+const LEGACY_LAST_ADMIN_PROJECT_KEY = "quote-sheet:last-admin-project-id";
 
 export function rememberAdminProjectContext(projectId: string): void {
   if (typeof window === "undefined") return;
@@ -6,6 +7,7 @@ export function rememberAdminProjectContext(projectId: string): void {
   if (!id) return;
   try {
     localStorage.setItem(LAST_ADMIN_PROJECT_KEY, id);
+    localStorage.setItem(LEGACY_LAST_ADMIN_PROJECT_KEY, id);
   } catch {
     /* ignore */
   }
@@ -14,8 +16,13 @@ export function rememberAdminProjectContext(projectId: string): void {
 export function getLastAdminProjectId(): string | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(LAST_ADMIN_PROJECT_KEY);
+    const raw =
+      localStorage.getItem(LAST_ADMIN_PROJECT_KEY) ??
+      localStorage.getItem(LEGACY_LAST_ADMIN_PROJECT_KEY);
     const id = raw?.trim() ?? "";
+    if (id.length > 0) {
+      localStorage.setItem(LAST_ADMIN_PROJECT_KEY, id);
+    }
     return id.length > 0 ? id : null;
   } catch {
     return null;

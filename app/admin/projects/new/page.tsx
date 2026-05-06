@@ -44,7 +44,7 @@ export default function NewProjectPage() {
           New Project
         </h1>
         <p className="text-body text-text-secondary">
-          Capture basic project details for this quote sheet.
+          Capture basic project details for this client workspace.
         </p>
       </header>
 
