@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { consumeLoginAttempt } from "@/lib/login-rate-limit";
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -12,6 +13,11 @@ function LoginForm() {
     "idle"
   );
   const [errorMessage, setErrorMessage] = useState("");
+
+  const formatRetryMessage = (retryAfterMs: number) => {
+    const retryMinutes = Math.max(1, Math.ceil(retryAfterMs / 60_000));
+    return `Too many login attempts. Please wait ${retryMinutes} minute${retryMinutes === 1 ? "" : "s"} before trying again.`;
+  };
 
   useEffect(() => {
     const error = searchParams.get("error");
@@ -39,6 +45,13 @@ function LoginForm() {
     setStatus("sending");
     setErrorMessage("");
     try {
+      const rateLimitResult = consumeLoginAttempt();
+      if (!rateLimitResult.allowed) {
+        setErrorMessage(formatRetryMessage(rateLimitResult.retryAfterMs));
+        setStatus("error");
+        return;
+      }
+
       const supabase = createClient();
       const origin =
         typeof window !== "undefined" ? window.location.origin : "";

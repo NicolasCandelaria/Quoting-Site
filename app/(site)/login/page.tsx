@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { consumeLoginAttempt } from "@/lib/login-rate-limit";
 
 function safeNextPath(next: string | null): string {
   if (!next || !next.startsWith("/") || next.startsWith("//")) {
@@ -21,6 +22,11 @@ function LoginForm() {
   );
   const [errorMessage, setErrorMessage] = useState("");
   const [checkingSession, setCheckingSession] = useState(true);
+
+  const formatRetryMessage = (retryAfterMs: number) => {
+    const retryMinutes = Math.max(1, Math.ceil(retryAfterMs / 60_000));
+    return `Too many login attempts. Please wait ${retryMinutes} minute${retryMinutes === 1 ? "" : "s"} before trying again.`;
+  };
 
   // If already signed in, skip the email form (same browser shares session cookies across tabs).
   useEffect(() => {
@@ -79,6 +85,13 @@ function LoginForm() {
     setStatus("sending");
     setErrorMessage("");
     try {
+      const rateLimitResult = consumeLoginAttempt();
+      if (!rateLimitResult.allowed) {
+        setErrorMessage(formatRetryMessage(rateLimitResult.retryAfterMs));
+        setStatus("error");
+        return;
+      }
+
       const supabase = createClient();
       const origin =
         typeof window !== "undefined" ? window.location.origin : "";
